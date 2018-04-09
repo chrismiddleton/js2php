@@ -203,6 +203,260 @@ class SingleQuotedStringToken extends Token {
 	}
 }
 
+class RegexCharacter {
+	public function __construct ($character) {
+		$this->character = $character;
+	}
+}
+
+// class RegexAnchor {
+// 
+// }
+// 
+// class RegexCharacterEscape {
+// 
+// }
+
+abstract class RegexSimpleElement {
+	public static function parse ($parser, $inCharacterClass = false) {
+		// TODO: for now just parsing all as characters
+		$c = $parser->peek();
+		if ($c === "/") {
+			// terminates the regex
+			return null;
+		} else if ($c === "\\") {
+			$parser->advance();
+			$c = $parser->read();
+			if ($c == null) return null;
+			return new RegexCharacter($c);
+		} else if (!$inCharacterClass && strpos("|?*+", $c) !== false) {
+			// Those characters are interpreted specially when we are outside of a character class
+			// (TODO: there are others too, but we aren't allowing for them at the moment)
+			return null;
+		} else if ($c !== null) {
+			$parser->advance();
+			return new RegexCharacter($c);
+		} else {
+			return null;
+		}
+		// if ($parser->readString("^")) {
+// 			return RegexStartAnchor::instance();
+// 		} else if ($parser->readString("$")) {
+// 			return RegexEndAnchor::instance();
+// 		} else if ($parser->readString(".")) {
+// 			return RegexAny::instance();
+// 		} else if ($parser->readString("\s")) {
+// 			return RegexWhitespace::instance();
+// 		} else if ($parser->readString("\S")) {
+// 			return RegexNonWhitespace::instance();
+// 		} else if ($parser->readString("\d")) {
+// 			return RegexDigit::instance();
+// 		} else if ($parser->readString("\D")) {
+// 			return RegexNonDigit::instance();
+// 		} else if ($parser->readString("\w")) {
+// 			return RegexWordCharacter::instance();
+// 		} else if ($parser->readString("\W")) {
+// 			return RegexNonWordCharacter::instance();
+// 		}
+		// TODO: handle \uFEFF kind and \xa0 kind
+	}
+}
+
+class RegexCharacterClass {
+
+	public function __construct ($negated, $elements) {
+		$this->negated = $negated;
+		$this->elements = $elements;
+	}
+
+	// TODO: handle ranges
+	public static function parse ($parser) {
+		$start = $parser->pos();
+		$negated = false;
+		if ($parser->readString("[")) {
+			if ($parser->readString("^")) {
+				$negated = true;
+			}
+			while (!$parser->isDone()) {
+				$c = $parser->peek();
+				if ($c === "]") {
+					$foundEnd = true;
+					$parser->advance();
+					break;
+				} else if ($c === "/") {
+					// invalid
+					break;
+				} else if ($element = RegexSimpleElement::parse($parser, true)) {
+					$elements[] = $element;
+				}
+			}
+			if (!$foundEnd) {
+				// backtrack
+				$parser->seek($start);
+				return null;
+			}
+			return new self($negated, $elements);
+		} else if ($element = RegexSimpleElement::parse($parser)) {
+			return $element;
+		}
+	
+	}
+
+}
+
+class RegexQuantifiedElement {
+
+	public function __construct ($element, $quantifier) {
+		$this->element = $element;
+		$this->quantifier = $quantifier;
+	}
+
+	public static function parse ($parser) {
+		$start = $parser->pos();
+		// TODO: handle groups as well
+		if ($element = RegexCharacterClass::parse($parser)) {
+			// let's see if we have a quantifier
+			if ($parser->readString("+")) {
+				return new self($element, "+");
+			} else if ($parser->readString("?")) {
+				return new self($element, "?");
+			} else if ($parser->readString("*")) {
+				return new self($element, "*");
+			} else if ($parser->readString("{")) {
+				$from = NumberToken::parse($parser);
+				// TODO: for now, treating invalid regex as not regex
+				if (!$from) {
+					$parser->seek($start);
+					return null;
+				}
+				$comma = false;
+				if ($parser->readString(",")) {
+					$comma = true;
+					$to = NumberToken::parse($parser);
+				}
+				if (!$parser->readString("}")) {
+					$parser->seek($start);
+					return null;
+				}
+				return new self($element, "\{$from" . ($comma ? ",$to" : ""));
+			} else {
+				// just return the element we found
+				return $element;
+			}
+			// TODO: handle all the other quantifier cases like *?, +?, etc.
+		}
+	}
+	
+}
+
+class RegexSequence {
+
+	public function __construct ($elements) {
+		$this->elements = $elements;
+	}
+	
+	public static function parse ($parser) {
+		$elements = array();
+		while (!$parser->isDone()) {
+			if ($element = RegexQuantifiedElement::parse($parser)) {
+				$elements[] = $element;
+			} else {
+				break;
+			}
+		}
+		if (count($elements) > 1) {
+			return new self($elements);
+		} else if (count($elements) === 1) {
+			return $elements[0];
+		} else {
+			return null;
+		}
+	}
+
+}
+
+class RegexEmptyElement {}
+
+class RegexAlternation {
+
+	public function __construct ($elements) {
+		$this->elements = $elements;
+	}
+	
+	public static function parse ($parser) {
+		$elements = array();
+		while (!$parser->isDone()) {
+			if ($element = RegexSequence::parse($parser)) {
+				$elements[] = $element;
+			} else {
+				// if we previously read a "|" but have no more text, then that can indicate an empty element
+				// e.g. such as /a|/, which is allowed.
+				if (count($elements)) {
+					// empty element
+					$elements[] = new RegexEmptyElement();
+				}
+			}
+			if (!$parser->readString("|")) break;
+		}
+		if (!count($elements)) return null;
+		// no alternations were found in this case
+		if (count($elements) === 1) return $elements[0];
+		return new self($elements);
+	}
+
+}
+
+// TODO maybe?: it would really be better perhaps to tokenize the regular expression first,
+// ending when we come upon an ending slash, which would prevent us from having to tell the lower regex elements
+// about things like "|" and "?", etc
+class RegexToken extends Token {
+	public function __construct ($elements, $flags) {
+		$this->elements = $elements;
+		$this->flags = $flags;
+	}
+	// TODO: fix this to prevent it from detecting regex literals which are really division
+	// by making a pipeline from the tokenizer to the parser and have the parser inform the tokenizer 
+	// about what literals are valid at that point in the program, e.g. instead of an ArrayIterator,
+	// we'll need a TokenizerIterator?
+	public static function parse ($parser) {
+		$elements = array();
+		$start = $parser->pos();
+		if (!$parser->readString("/")) return;
+		$c = $parser->peek();
+		// single line comment case
+		if ($c === "/") {
+			$parser->seek($start);
+			return;
+		}
+		while (!$parser->isDone()) {
+			if ($parser->readString("/")) {
+				// done reading the regex
+				break;
+			} else if ($element = RegexAlternation::parse($parser)) {
+				$elements[] = $element;
+			} else {
+				// we didn't see the end, but we failed to read anything, so let's assume we were wrong about this being a regex
+				$elements = array();
+				break;
+			}
+		}
+		// TODO: failed to read a regex, so assume it must be division or something for now
+		if (!count($elements)) {
+			$parser->seek($start);
+			return null;
+		}
+		// read any flags
+		$flags = "";
+		while (!$parser->isDone()) {
+			$c = $parser->peek();
+			if (!ctype_alpha($c)) break;
+			$flags .= $c;
+			$parser->advance();
+		}
+		return new self($elements, $flags);
+	}
+}
+
 class JsTokenizer {
 	public function __construct () {}
 	public static function tokenize ($js) {
@@ -230,6 +484,7 @@ class JsTokenizer {
 			if (
 				$token = MultilineCommentToken::parse($parser) or
 				$token = SingleLineCommentToken::parse($parser) or
+				$token = RegexToken::parse($parser) or
 				$token = DoubleQuotedStringToken::parse($parser) or
 				$token = SingleQuotedStringToken::parse($parser) or
 				$token = SpaceToken::parse($parser) or
@@ -400,10 +655,38 @@ class VarDeclarationPiece {
 	}
 }
 
+class ParenthesizedExpression extends Expression {
+	public function __construct ($expression) {
+		$this->expression = $expression;
+	}
+	public static function fromJs (ArrayIterator $tokens) {
+		$start = $tokens->key();
+		Comments::fromJs($tokens);
+		if (!Symbol::parse($tokens, "(")) {
+			$tokens->seek($start);
+			return null;
+		}
+		echo "found paren\n"; // fdo
+		$expression = Expression::fromJs($tokens);
+		if (!$expression) {
+			throw new Exception("Expected expression after '('");
+		}
+		Comments::fromJs($tokens);
+		var_dump($expression); // fdo
+		if (!Symbol::parse($tokens, ")")) {
+			throw new Exception("Expected ')' after expression");
+		}
+		return new self($expression);
+	}
+}
+
 abstract class Expression {
 	public function __construct () {}
 	public static function fromJs (ArrayIterator $tokens) {
-		return StrictEqualityExpression::fromJs($tokens);
+		echo "in expression\n"; // fdo
+		$expression = ParenthesizedExpression::fromJs($tokens) or
+			$expression = BooleanAndExpression::fromJs($tokens);
+		return $expression;
 	}
 }
 
@@ -413,6 +696,12 @@ class IdentifierExpression extends Expression {
 	}
 	public static function fromJs (ArrayIterator $tokens) {
 		$identifier = Identifier::fromJs($tokens);
+		// TODO: better way to do this?
+		if (in_array($identifier->name, array(
+			"function"
+		))) {
+			return null;
+		}
 		return $identifier ? new self($identifier) : null;
 	}
 	public function toPhp ($indents) {
@@ -618,11 +907,14 @@ abstract class SimpleExpression extends Expression {
 		$expression = BooleanExpression::fromJs($tokens) or
 			$expression = NullExpression::fromJs($tokens) or
 			$expression = UndefinedExpression::fromJs($tokens) or
+			$expression = FunctionExpression::fromJs($tokens) or
 			$expression = IdentifierExpression::fromJs($tokens) or
 			$expression = DecimalNumberExpression::fromJs($tokens) or
 // 			$expression = HexadecimalNumberExpression::fromJs($tokens) or
 			$expression = DoubleQuotedStringExpression::fromJs($tokens) or
-			$expression = SingleQuotedStringExpression::fromJs($tokens);
+			$expression = SingleQuotedStringExpression::fromJs($tokens)
+// 			or $expression = RegexLiteralExpression::fromJs($tokens)
+		;
 		return $expression;
 	}
 }
@@ -782,6 +1074,35 @@ class FunctionCallExpression extends Expression {
 	}
 }
 
+class TypeofExpression {
+	public function __construct ($expression) {
+		$this->expression = $expression;
+	}
+	public static function fromJs ($tokens) {
+		$identifier = Identifier::fromJs($tokens);
+		if ($identifier && $identifier->name === 'typeof') {
+			$expression = TypeofExpression::fromJs($tokens);
+			if (!$expression) throw new Exception("Expected expression after 'typeof'");
+			return new self($expression);
+		} else {
+			return FunctionExpressionLevelExpression::fromJs($tokens);
+		}
+	}
+	public function toPhp ($indents) {
+		// TODO: handle the different cases here
+		return "gettype(" . $this->expression->toPhp($indents) . ")";
+	}
+}
+
+abstract class FunctionExpressionLevelExpression {
+	public static function fromJs ($tokens) {
+		// function expression gets precedence or else function(a,b) would be parsed as a function call
+		$expression = FunctionExpression::fromJs($tokens) or
+			$expression = FunctionCallExpression::fromJs($tokens);
+		return $expression;
+	}
+}
+
 class StrictEqualityExpression extends Expression {
 	public function __construct ($a, $b) {
 		$this->a = $a;
@@ -789,7 +1110,7 @@ class StrictEqualityExpression extends Expression {
 	}
 	public static function fromJs ($tokens) {
 		$start = $tokens->key();
-		$a = FunctionCallExpression::fromJs($tokens);
+		$a = TypeofExpression::fromJs($tokens);
 		if (!$a) return;
 		$start = $tokens->key();
 		Comments::fromJs($tokens);
@@ -797,14 +1118,42 @@ class StrictEqualityExpression extends Expression {
 			$tokens->seek($start);
 			return $a;
 		}
+		echo "in strict equality expr\n"; // fdo
 		// TODO: this one shouldn't be necessary - something is missing this
 		Comments::fromJs($tokens);
-		$b = FunctionCallExpression::fromJs($tokens);
+		$b = TypeofExpression::fromJs($tokens);
 		if (!$b) throw new Exception("Expected right-hand side after '==='");
 		return new self ($a, $b);
 	}
 	public function toPhp ($indents) {
 		return $this->a->toPhp($indents) . " === " . $this->b->toPhp($indents);
+	}
+}
+
+class BooleanAndExpression extends Expression {
+	public function __construct ($a, $b) {
+		$this->a = $a;
+		$this->b = $b;
+	}
+	public static function fromJs ($tokens) {
+		$start = $tokens->key();
+		$a = StrictEqualityExpression::fromJs($tokens);
+		if (!$a) return;
+		$start = $tokens->key();
+		Comments::fromJs($tokens);
+		if (!Symbol::parse($tokens, "&&")) {
+			$tokens->seek($start);
+			return $a;
+		}
+		echo "in boolean and\n"; // fdo
+		// TODO: this one shouldn't be necessary - something is missing this
+		Comments::fromJs($tokens);
+		$b = StrictEqualityExpression::fromJs($tokens);
+		if (!$b) throw new Exception("Expected right-hand side after '&&'");
+		return new self ($a, $b);
+	}
+	public function toPhp ($indents) {
+		return $this->a->toPhp($indents) . " && " . $this->b->toPhp($indents);
 	}
 }
 
@@ -981,6 +1330,7 @@ class FunctionBody {
 		$this->statements = $statements;
 	}
 	public static function fromJs ($tokens) {
+		echo "in function body\n"; // fdo
 		$statements = array();
 		while ($tokens->valid()) {
 			if (
@@ -1009,6 +1359,7 @@ class FunctionDeclaration {
 		$this->body = $body;
 	}
 	public static function fromJs (ArrayIterator $tokens) {
+		echo "in function declaration\n"; // fdo
 		$start = $tokens->key();
 		// get last doc block
 		while ($tokens->valid()) {
@@ -1069,6 +1420,75 @@ class FunctionDeclaration {
 	}
 }
 
+// TODO: unify the FunctionExpression and FunctionDeclaration classes more since mostly duplicate code?
+class FunctionExpression {
+	public function __construct ($name, $params, $body) {
+		$this->name = $name;
+		$this->params = $params;
+		$this->body = $body;
+	}
+	public static function fromJs (ArrayIterator $tokens) {
+		echo "testing for function expression\n"; // fdo
+						$array = array_slice($tokens->getArrayCopy(), $tokens->key(), 5); // fdo
+				var_dump($array); // fdo
+		$start = $tokens->key();
+		// get last doc block
+		while ($tokens->valid()) {
+			if ($docBlock = DocBlock::fromJs($tokens)) continue;
+			if (MultilineComment::fromJs($tokens)) continue;
+			if (SingleLineComment::fromJs($tokens)) continue;
+			if (Space::fromJs($tokens)) continue;
+			break;
+		}
+		if (!Keyword::fromJs($tokens, "function")) {
+			$tokens->seek($start);
+			return;
+		}
+		echo "in function expression\n"; // fdo
+		Comments::fromJs($tokens);
+		// name is optional
+		$name = Identifier::fromJs($tokens);
+		Comments::fromJs($tokens);
+		if (!Symbol::parse($tokens, "(")) {
+			$tokens->seek($start);
+			return;
+		}
+		// parse parameters
+		$params = array();
+		while ($tokens->valid()) {
+			Comments::fromJs($tokens);
+			$params[] = Identifier::fromJs($tokens);
+			Comments::fromJs($tokens);
+			if (!Symbol::parse($tokens, ",")) break;
+		}
+		if (!Symbol::parse($tokens, ")")) {
+			throw new Exception("Expected closing ')' after function parameters");
+		}
+		Comments::fromJs($tokens);
+		if (!Symbol::parse($tokens, "{")) {
+			throw new Exception("Expected opening '{' after function parameters");
+		}
+		$body = FunctionBody::fromJs($tokens);
+		$token = $tokens->current();
+		if (!Symbol::parse($tokens, "}")) {
+			throw new Exception("Expected closing '}' after function body");
+		}
+		return new self($name, $params, $body);
+	}
+	public function toPhp ($indents = "") {
+		$code = $indents . "function " . ($this->name ? "{$this->name->name} " : "") . "(";
+		$paramStrs = array();
+		foreach ($this->params as $param) {
+			$paramStrs []= $param->toPhp($indents);
+		}
+		$code .= implode(", ", $paramStrs);
+		$code .= ") {\n";
+		$code .= $this->body->toPhp($indents . "\t");
+		$code .= $indents . "}\n";
+		return $code;
+	}
+}
+
 class Program {
 	public function __construct () {
 		$this->children = array();
@@ -1076,14 +1496,23 @@ class Program {
 	public static function fromJs (ArrayIterator $tokens) {
 		$program = new Program();
 		while ($tokens->valid()) {
+			echo "in program"; // fdo
 			try {
 				if ($child = FunctionDeclaration::fromJs($tokens)) {
 					$program->children[] = $child;
 					continue;
+				} else if ($child = Expression::fromJs($tokens)) {
+					$program->children[] = $child;
+				} else if (Comments::fromJs($tokens)) {
+					;
 				} else {
-					Comments::fromJs($tokens);
+					$token = $tokens->current();
+					throw new Exception("Unexpected token: " . var_export($token, true));
 				}
 			} catch (Exception $e) {
+// 				var_dump($program); // fdo
+// 				$array = array_slice($tokens->getArrayCopy(), $tokens->key(), 30); // fdo
+// 				var_dump($array); // fdo
 				throw $e;
 			}
 		}

@@ -469,7 +469,7 @@ class JsTokenizer {
 			"-=", "--", "-",
 			"*=", "**", "*",
 			"/=", "/",
-			"%",
+			"%=", "%",
 			"<<=", "<<", "<=", "<",
 			">>=", ">>", ">", ">=",
 			"~=", "~",
@@ -666,13 +666,11 @@ class ParenthesizedExpression extends Expression {
 			$tokens->seek($start);
 			return null;
 		}
-		echo "found paren\n"; // fdo
 		$expression = Expression::fromJs($tokens);
 		if (!$expression) {
 			throw new Exception("Expected expression after '('");
 		}
 		Comments::fromJs($tokens);
-		var_dump($expression); // fdo
 		if (!Symbol::parse($tokens, ")")) {
 			throw new Exception("Expected ')' after expression");
 		}
@@ -683,9 +681,8 @@ class ParenthesizedExpression extends Expression {
 abstract class Expression {
 	public function __construct () {}
 	public static function fromJs (ArrayIterator $tokens) {
-		echo "in expression\n"; // fdo
 		$expression = ParenthesizedExpression::fromJs($tokens) or
-			$expression = BooleanAndExpression::fromJs($tokens);
+			$expression = AssignmentExpression::fromJs($tokens);
 		return $expression;
 	}
 }
@@ -1079,14 +1076,15 @@ class TypeofExpression {
 		$this->expression = $expression;
 	}
 	public static function fromJs ($tokens) {
+		$start = $tokens->key();
 		$identifier = Identifier::fromJs($tokens);
-		if ($identifier && $identifier->name === 'typeof') {
-			$expression = TypeofExpression::fromJs($tokens);
-			if (!$expression) throw new Exception("Expected expression after 'typeof'");
-			return new self($expression);
-		} else {
+		if (!$identifier || $identifier->name !== 'typeof') {
+			$tokens->seek($start);
 			return FunctionExpressionLevelExpression::fromJs($tokens);
 		}
+		$expression = TypeofExpression::fromJs($tokens);
+		if (!$expression) throw new Exception("Expected expression after 'typeof'");
+		return new self($expression);
 	}
 	public function toPhp ($indents) {
 		// TODO: handle the different cases here
@@ -1118,7 +1116,6 @@ class StrictEqualityExpression extends Expression {
 			$tokens->seek($start);
 			return $a;
 		}
-		echo "in strict equality expr\n"; // fdo
 		// TODO: this one shouldn't be necessary - something is missing this
 		Comments::fromJs($tokens);
 		$b = TypeofExpression::fromJs($tokens);
@@ -1145,7 +1142,6 @@ class BooleanAndExpression extends Expression {
 			$tokens->seek($start);
 			return $a;
 		}
-		echo "in boolean and\n"; // fdo
 		// TODO: this one shouldn't be necessary - something is missing this
 		Comments::fromJs($tokens);
 		$b = StrictEqualityExpression::fromJs($tokens);
@@ -1154,6 +1150,36 @@ class BooleanAndExpression extends Expression {
 	}
 	public function toPhp ($indents) {
 		return $this->a->toPhp($indents) . " && " . $this->b->toPhp($indents);
+	}
+}
+
+class AssignmentExpression extends Expression {
+	public function __construct ($left, $symbol, $right) {
+		$this->left = $left;
+		$this->symbol = $symbol;
+		$this->right = $right;
+	}
+	public static function fromJs ($tokens) {
+		// TODO: verify that it's a valid LHS?
+		$left = BooleanAndExpression::fromJs($tokens);
+		if (!$left) return;
+		$afterLeft = $tokens->key();
+		Comments::fromJs($tokens);
+		$symbols = array("=", "+=", "-", "*=", "/=", "%=", "<<=", ">>=", "~=", "^=", "&=", "|=");
+		foreach ($symbols as $symbol) {
+			$symbolFound = Symbol::parse($tokens, $symbol);
+			if ($symbolFound) break;
+		}
+		if (!$symbolFound) {
+			$tokens->seek($afterLeft);
+			return $left;
+		}
+		$right = AssignmentExpression::fromJs($tokens);
+		if (!$right) throw new Exception("Expected RHS of assignment");
+		return new self($left, $symbol, $right);
+	}
+	public function toPhp ($indents) {
+		return $left->toPhp($indents) . " {$this->symbol} " . $right->toPhp($indents);
 	}
 }
 
@@ -1330,7 +1356,6 @@ class FunctionBody {
 		$this->statements = $statements;
 	}
 	public static function fromJs ($tokens) {
-		echo "in function body\n"; // fdo
 		$statements = array();
 		while ($tokens->valid()) {
 			if (
@@ -1359,7 +1384,6 @@ class FunctionDeclaration {
 		$this->body = $body;
 	}
 	public static function fromJs (ArrayIterator $tokens) {
-		echo "in function declaration\n"; // fdo
 		$start = $tokens->key();
 		// get last doc block
 		while ($tokens->valid()) {
@@ -1428,9 +1452,6 @@ class FunctionExpression {
 		$this->body = $body;
 	}
 	public static function fromJs (ArrayIterator $tokens) {
-		echo "testing for function expression\n"; // fdo
-						$array = array_slice($tokens->getArrayCopy(), $tokens->key(), 5); // fdo
-				var_dump($array); // fdo
 		$start = $tokens->key();
 		// get last doc block
 		while ($tokens->valid()) {
@@ -1444,7 +1465,6 @@ class FunctionExpression {
 			$tokens->seek($start);
 			return;
 		}
-		echo "in function expression\n"; // fdo
 		Comments::fromJs($tokens);
 		// name is optional
 		$name = Identifier::fromJs($tokens);
@@ -1496,7 +1516,6 @@ class Program {
 	public static function fromJs (ArrayIterator $tokens) {
 		$program = new Program();
 		while ($tokens->valid()) {
-			echo "in program"; // fdo
 			try {
 				if ($child = FunctionDeclaration::fromJs($tokens)) {
 					$program->children[] = $child;
@@ -1510,9 +1529,9 @@ class Program {
 					throw new Exception("Unexpected token: " . var_export($token, true));
 				}
 			} catch (Exception $e) {
-// 				var_dump($program); // fdo
-// 				$array = array_slice($tokens->getArrayCopy(), $tokens->key(), 30); // fdo
-// 				var_dump($array); // fdo
+				var_dump($program); // fdo
+				$array = array_slice($tokens->getArrayCopy(), $tokens->key(), 5); // fdo
+				var_dump($array); // fdo
 				throw $e;
 			}
 		}

@@ -609,7 +609,7 @@ class Symbol {
 	public function __construct ($symbol) {
 		$this->symbol = $symbol;
 	}
-	public static function parse ($tokens, $symbol = null) {
+	public static function fromJs ($tokens, $symbol = null) {
 		$start = $tokens->key();
 		Comments::fromJs($tokens);
 		$token = $tokens->current();
@@ -661,8 +661,7 @@ class ParenthesizedExpression extends Expression {
 	}
 	public static function fromJs (ArrayIterator $tokens) {
 		$start = $tokens->key();
-		Comments::fromJs($tokens);
-		if (!Symbol::parse($tokens, "(")) {
+		if (!Symbol::fromJs($tokens, "(")) {
 			$tokens->seek($start);
 			return null;
 		}
@@ -670,8 +669,7 @@ class ParenthesizedExpression extends Expression {
 		if (!$expression) {
 			throw new Exception("Expected expression after '('");
 		}
-		Comments::fromJs($tokens);
-		if (!Symbol::parse($tokens, ")")) {
+		if (!Symbol::fromJs($tokens, ")")) {
 			throw new Exception("Expected ')' after expression");
 		}
 		return new self($expression);
@@ -925,13 +923,11 @@ class BracketPropertyAccessExpression extends Expression {
 		$object = SimpleExpression::fromJs($tokens);
 		if (!$object) return;
 		while ($tokens->valid()) {
-			Comments::fromJs($tokens);
-			if (!Symbol::parse($tokens, "[")) {
+			if (!Symbol::fromJs($tokens, "[")) {
 				return $object;
 			}
-			Comments::fromJs($tokens);
 			$property = Expression::fromJs($tokens);
-			if (!Symbol::parse($tokens, "]")) {
+			if (!Symbol::fromJs($tokens, "]")) {
 				throw new Exception("Expected ']' after property expression");
 			}
 			$object = new self($object, $property);
@@ -952,12 +948,10 @@ class DotPropertyAccessExpression extends Expression {
 		$object = BracketPropertyAccessExpression::fromJs($tokens);
 		if (!$object) return;
 		while ($tokens->valid()) {
-			Comments::fromJs($tokens);
-			if (!Symbol::parse($tokens, ".")) {
+			if (!Symbol::fromJs($tokens, ".")) {
 				return $object;
 			}
 			// identifier expected
-			Comments::fromJs($tokens);
 			$property = PropertyIdentifier::fromJs($tokens);
 			$token = $tokens->current();
 			$object = new self($object, $property);
@@ -1011,8 +1005,7 @@ class FunctionCallExpression extends Expression {
 		$func = DotPropertyAccessExpression::fromJs($tokens);
 		if (!$func) return;
 		while ($tokens->valid()) {
-			Comments::fromJs($tokens);
-			if (!Symbol::parse($tokens, "(")) {
+			if (!Symbol::fromJs($tokens, "(")) {
 				return $func;
 			}
 
@@ -1023,11 +1016,9 @@ class FunctionCallExpression extends Expression {
 				$arg = Expression::fromJs($tokens);
 				if (!$arg) break;
 				$args[] = $arg;
-				Comments::fromJs($tokens);
-				if (!Symbol::parse($tokens, ",")) break;
+				if (!Symbol::fromJs($tokens, ",")) break;
 			}
-			Comments::fromJs($tokens);
-			if (!Symbol::parse($tokens, ")")) {
+			if (!Symbol::fromJs($tokens, ")")) {
 				throw new Exception("Expected ')' after function arguments");
 			}
 			$func = new self("js", $func, $args);
@@ -1111,13 +1102,11 @@ class StrictEqualityExpression extends Expression {
 		$a = TypeofExpression::fromJs($tokens);
 		if (!$a) return;
 		$start = $tokens->key();
-		Comments::fromJs($tokens);
-		if (!Symbol::parse($tokens, "===")) {
+		if (!Symbol::fromJs($tokens, "===")) {
 			$tokens->seek($start);
 			return $a;
 		}
 		// TODO: this one shouldn't be necessary - something is missing this
-		Comments::fromJs($tokens);
 		$b = TypeofExpression::fromJs($tokens);
 		if (!$b) throw new Exception("Expected right-hand side after '==='");
 		return new self ($a, $b);
@@ -1137,19 +1126,47 @@ class BooleanAndExpression extends Expression {
 		$a = StrictEqualityExpression::fromJs($tokens);
 		if (!$a) return;
 		$start = $tokens->key();
-		Comments::fromJs($tokens);
-		if (!Symbol::parse($tokens, "&&")) {
+		if (!Symbol::fromJs($tokens, "&&")) {
 			$tokens->seek($start);
 			return $a;
 		}
-		// TODO: this one shouldn't be necessary - something is missing this
-		Comments::fromJs($tokens);
 		$b = StrictEqualityExpression::fromJs($tokens);
 		if (!$b) throw new Exception("Expected right-hand side after '&&'");
 		return new self ($a, $b);
 	}
 	public function toPhp ($indents) {
 		return $this->a->toPhp($indents) . " && " . $this->b->toPhp($indents);
+	}
+}
+
+class TernaryExpression extends Expression {
+	public function __construct ($test, $yes, $no) {
+		$this->test = $test;
+		$this->yes = $yes;
+		$this->no = $no;
+	}
+	public static function fromJs ($tokens) {
+		$test = BooleanAndExpression::fromJs($tokens);
+		if (!$test) return;
+		$afterTest = $tokens->key();
+		if (!Symbol::fromJs($tokens, "?")) {
+			$tokens->seek($afterTest);
+			return $test;
+		}
+		if (!($yes = BooleanAndExpression::fromJs($tokens))) {
+			throw new Exception("Expected 'yes' value after start of ternary ('?')");
+		}
+		if (!Symbol::fromJs($tokens, ":")) {
+			throw new Exception("Expected ':' after yes value in ternary");
+		}
+		if (!($no = BooleanAndExpression::fromJs($tokens))) {
+			throw new Exception("Expected 'no' value after ':' in ternary expression");
+		}
+		return new self($test, $yes, $no);
+	}
+	public function toPhp ($indents) {
+		// parens due to php precedence difference
+		return $this->test->toPhp($indents) . " ? (" . $this->yes->toPhp($indents) . ") : (" . $this->no->toPhp($indents) . ")";
 	}
 }
 
@@ -1161,13 +1178,12 @@ class AssignmentExpression extends Expression {
 	}
 	public static function fromJs ($tokens) {
 		// TODO: verify that it's a valid LHS?
-		$left = BooleanAndExpression::fromJs($tokens);
+		$left = TernaryExpression::fromJs($tokens);
 		if (!$left) return;
 		$afterLeft = $tokens->key();
-		Comments::fromJs($tokens);
 		$symbols = array("=", "+=", "-", "*=", "/=", "%=", "<<=", ">>=", "~=", "^=", "&=", "|=");
 		foreach ($symbols as $symbol) {
-			$symbolFound = Symbol::parse($tokens, $symbol);
+			$symbolFound = Symbol::fromJs($tokens, $symbol);
 			if ($symbolFound) break;
 		}
 		if (!$symbolFound) {
@@ -1189,7 +1205,6 @@ class VarDeclaration {
 	}
 	public static function fromJs (ArrayIterator $tokens) {
 		$start = $tokens->key();
-		Comments::fromJs($tokens);
 		if (!Keyword::fromJs($tokens, "var")) {
 			$tokens->seek($start);
 			return;
@@ -1198,23 +1213,17 @@ class VarDeclaration {
 		$pieces = array();
 		while ($tokens->valid()) {
 			// TODO: move some of this into VarDeclarationPiece?
-			Comments::fromJs($tokens);
 			$name = Identifier::fromJs($tokens);
 			if (!$name) break;
 			$val = null;
-			Comments::fromJs($tokens);
-			if (Symbol::parse($tokens, "=")) {
-				Comments::fromJs($tokens);
+			if (Symbol::fromJs($tokens, "=")) {
 				$val = Expression::fromJs($tokens);
 			}
 			$pieces[] = new VarDeclarationPiece($name, $val);
-			Comments::fromJs($tokens);
-			if (!Symbol::parse($tokens, ",")) break;
+			if (!Symbol::fromJs($tokens, ",")) break;
 		}
-		Comments::fromJs($tokens);
 		// optionally, eat semicolon
-		Symbol::parse($tokens, ";");
-		Comments::fromJs($tokens);
+		Symbol::fromJs($tokens, ";");
 		return new self($pieces);
 	}
 	public function toPhp ($indents) {
@@ -1233,9 +1242,8 @@ class Block {
 		$this->brace = $brace;
 	}
 	public static function fromJs ($tokens) {
-		Comments::fromJs($tokens);
 		$brace = false;
-		if (Symbol::parse($tokens, "{")) $brace = true;
+		if (Symbol::fromJs($tokens, "{")) $brace = true;
 		$statements = array();
 		while ($tokens->valid()) {
 			$statement = Statement::fromJs($tokens);
@@ -1244,8 +1252,7 @@ class Block {
 			if (!$brace) break;
 		}
 		if ($brace) {
-			Comments::fromJs($tokens);
-			if (!Symbol::parse($tokens, "}")) throw new Exception("Expected closing '}' after block");
+			if (!Symbol::fromJs($tokens, "}")) throw new Exception("Expected closing '}' after block");
 		}
 		return new self($statements, $brace);
 	}
@@ -1266,16 +1273,14 @@ class ReturnStatement {
 	}
 	public static function fromJs ($tokens) {
 		$start = $tokens->key();
-		Comments::fromJs($tokens);
 		if (!Keyword::fromJs($tokens, "return")) {
 			$tokens->seek($start);
 			return;
 		}
-		Comments::fromJs($tokens);
 		// can be null, that's OK
 		$value = Expression::fromJs($tokens);
 		// optional semicolon
-		Symbol::parse($tokens, ";");
+		Symbol::fromJs($tokens, ";");
 		// TODO: handle cutting off early when newline (e.g. "return 5\n+6" should just return 5 in JS)
 		return new self($value);
 	}
@@ -1292,22 +1297,18 @@ class IfStatement {
 	}
 	public static function fromJs ($tokens) {
 		$start = $tokens->key();
-		Comments::fromJs($tokens);
 		if (!Keyword::fromJs($tokens, "if")) {
 			$tokens->seek($start);
 			return;
 		}
-		Comments::fromJs($tokens);
-		if (!Symbol::parse($tokens, "(")) {
+		if (!Symbol::fromJs($tokens, "(")) {
 			throw new Exception("Expected '(' after if");
 		}
 		$condition = Expression::fromJs($tokens);
-		Comments::fromJs($tokens);
-		if (!Symbol::parse($tokens, ")")) {
+		if (!Symbol::fromJs($tokens, ")")) {
 			throw new Exception("Expected ')' after if condition");
 		}
 		$ifBlock = Block::fromJs($tokens);
-		Comments::fromJs($tokens);
 		if (Keyword::fromJs($tokens, "else")) {
 			$elseBlock = Block::fromJs($tokens);
 		}
@@ -1331,9 +1332,8 @@ class ExpressionStatement {
 	}
 	public static function fromJs ($tokens) {
 		if (!($expression = Expression::fromJs($tokens))) return;
-		Comments::fromJs($tokens);
 		// semicolon optional
-		Symbol::parse($tokens, ";");
+		Symbol::fromJs($tokens, ";");
 		return new self($expression);
 	}
 	public function toPhp ($indents) {
@@ -1397,35 +1397,30 @@ class FunctionDeclaration {
 			$tokens->seek($start);
 			return;
 		}
-		Comments::fromJs($tokens);
 		$name = Identifier::fromJs($tokens);
 		if (!$name) {
 			$tokens->seek($start);
 			return;
 		}
-		Comments::fromJs($tokens);
-		if (!Symbol::parse($tokens, "(")) {
+		if (!Symbol::fromJs($tokens, "(")) {
 			$tokens->seek($start);
 			return;
 		}
 		// parse parameters
 		$params = array();
 		while ($tokens->valid()) {
-			Comments::fromJs($tokens);
 			$params[] = Identifier::fromJs($tokens);
-			Comments::fromJs($tokens);
-			if (!Symbol::parse($tokens, ",")) break;
+			if (!Symbol::fromJs($tokens, ",")) break;
 		}
-		if (!Symbol::parse($tokens, ")")) {
+		if (!Symbol::fromJs($tokens, ")")) {
 			throw new Exception("Expected closing ')' after function parameters");
 		}
-		Comments::fromJs($tokens);
-		if (!Symbol::parse($tokens, "{")) {
+		if (!Symbol::fromJs($tokens, "{")) {
 			throw new Exception("Expected opening '{' after function parameters");
 		}
 		$body = FunctionBody::fromJs($tokens);
 		$token = $tokens->current();
-		if (!Symbol::parse($tokens, "}")) {
+		if (!Symbol::fromJs($tokens, "}")) {
 			throw new Exception("Expected closing '}' after function body");
 		}
 		return new self($name, $params, $body);
@@ -1465,32 +1460,27 @@ class FunctionExpression {
 			$tokens->seek($start);
 			return;
 		}
-		Comments::fromJs($tokens);
 		// name is optional
 		$name = Identifier::fromJs($tokens);
-		Comments::fromJs($tokens);
-		if (!Symbol::parse($tokens, "(")) {
+		if (!Symbol::fromJs($tokens, "(")) {
 			$tokens->seek($start);
 			return;
 		}
 		// parse parameters
 		$params = array();
 		while ($tokens->valid()) {
-			Comments::fromJs($tokens);
 			$params[] = Identifier::fromJs($tokens);
-			Comments::fromJs($tokens);
-			if (!Symbol::parse($tokens, ",")) break;
+			if (!Symbol::fromJs($tokens, ",")) break;
 		}
-		if (!Symbol::parse($tokens, ")")) {
+		if (!Symbol::fromJs($tokens, ")")) {
 			throw new Exception("Expected closing ')' after function parameters");
 		}
-		Comments::fromJs($tokens);
-		if (!Symbol::parse($tokens, "{")) {
+		if (!Symbol::fromJs($tokens, "{")) {
 			throw new Exception("Expected opening '{' after function parameters");
 		}
 		$body = FunctionBody::fromJs($tokens);
 		$token = $tokens->current();
-		if (!Symbol::parse($tokens, "}")) {
+		if (!Symbol::fromJs($tokens, "}")) {
 			throw new Exception("Expected closing '}' after function body");
 		}
 		return new self($name, $params, $body);
@@ -1557,4 +1547,5 @@ function jsFileToPhp ($file) {
 	return jsToPhp($js);
 }
 
-echo jsFileToPhp("foo.js");
+// echo jsFileToPhp("foo.js");
+echo jsFileToPhp("../jQuery-slim.js");

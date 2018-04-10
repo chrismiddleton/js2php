@@ -656,7 +656,7 @@ class Keyword {
 }
 
 // TODO: better name for this
-class VarDeclarationPiece {
+class VarDefinitionPiece {
 	public function __construct (Identifier $name, Expression $val = null) {
 		$this->name = $name;
 		$this->val = $val;
@@ -691,9 +691,7 @@ class ParenthesizedExpression extends Expression {
 abstract class Expression {
 	public function __construct () {}
 	public static function fromJs (ArrayIterator $tokens) {
-		$expression = AssignmentExpression::fromJs($tokens) or
-			$expression = FunctionCallExpression::fromJs($tokens);
-		return $expression;
+		return AssignmentExpression::fromJs($tokens);
 	}
 }
 
@@ -1042,21 +1040,6 @@ class BracketPropertyAccessExpression extends Expression {
 		$this->object = $object;
 		$this->property = $property;
 	}
-	public static function fromJs (ArrayIterator $tokens) {
-		$object = NotExpression::fromJs($tokens);
-		if (!$object) return;
-		while ($tokens->valid()) {
-			if (!Symbol::fromJs($tokens, "[")) {
-				return $object;
-			}
-			debug("found property access with '[]'");
-			$property = Expression::fromJs($tokens);
-			if (!Symbol::fromJs($tokens, "]")) {
-				throw new Exception("Expected ']' after property expression");
-			}
-			$object = new self($object, $property);
-		}
-	}
 	public function toPhp ($indents) {
 		// TODO: this isn't quite right
 		return $this->object->toPhp($indents) . "->" . $this->property->toPhp($indents);
@@ -1067,21 +1050,6 @@ class DotPropertyAccessExpression extends Expression {
 	public function __construct (Expression $object, PropertyIdentifier $property) {
 		$this->object = $object;
 		$this->property = $property;
-	}
-	public static function fromJs (ArrayIterator $tokens) {
-		debug("looking for property access");
-		$object = BracketPropertyAccessExpression::fromJs($tokens);
-		if (!$object) return;
-		while ($tokens->valid()) {
-			if (!Symbol::fromJs($tokens, ".")) {
-				return $object;
-			}
-			debug("found property access with '.'");
-			// identifier expected
-			$property = PropertyIdentifier::fromJs($tokens);
-			$token = $tokens->current();
-			$object = new self($object, $property);
-		}
 	}
 	public function toPhp ($indents) {
 		return $this->object->toPhp($indents) . "->" . $this->property->toPhp($indents);
@@ -1123,38 +1091,54 @@ class FunctionIdentifier extends Identifier {
 	}
 }
 
+abstract class FunctionCallLevelExpression extends Expression {
+	public static function fromJs ($tokens) {
+		debug("looking for function call level expression");
+		$expression = ParenthesizedExpression::fromJs($tokens) or
+			$expression = NotExpression::fromJs($tokens);
+		if (!$expression) return;
+		while ($tokens->valid()) {
+			if (Symbol::fromJs($tokens, "(")) {
+				debug("found function call");
+				// parse the args
+				$args = array();
+				while ($tokens->valid()) {
+					$token = $tokens->current();
+					$arg = Expression::fromJs($tokens);
+					if (!$arg) break;
+					$args[] = $arg;
+					if (!Symbol::fromJs($tokens, ",")) break;
+				}
+				if (!Symbol::fromJs($tokens, ")")) {
+					throw new Exception("Expected ')' after function arguments");
+				}
+				$expression = new FunctionCallExpression("js", $expression, $args);
+			} else if (Symbol::fromJs($tokens, ".")) {
+				debug("found property access with '.'");
+				// identifier expected
+				$property = PropertyIdentifier::fromJs($tokens);
+				$token = $tokens->current();
+				$expression = new DotPropertyAccessExpression($expression, $property);
+			} else if (Symbol::fromJs($tokens, "[")) {
+				debug("found property access with '[]'");
+				$property = Expression::fromJs($tokens);
+				if (!Symbol::fromJs($tokens, "]")) {
+					throw new Exception("Expected ']' after property expression");
+				}
+				$expression = new BracketPropertyAccessExpression($expression, $property);
+			} else {
+				return $expression;
+			}
+		}
+	}
+}
+
 // (2 * 2)().b()
 class FunctionCallExpression extends Expression {
 	public function __construct ($source, $func, $params) {
 		$this->source = $source;
 		$this->func = $func;
 		$this->params = $params;
-	}
-	public static function fromJs (ArrayIterator $tokens) {
-		debug("looking for function call expression");
-		$func = ParenthesizedExpression::fromJs($tokens) or
-			$func = DotPropertyAccessExpression::fromJs($tokens);
-		if (!$func) return;
-		while ($tokens->valid()) {
-			if (!Symbol::fromJs($tokens, "(")) {
-				return $func;
-			}
-			debug("found function call");
-
-			// parse the args
-			$args = array();
-			while ($tokens->valid()) {
-				$token = $tokens->current();
-				$arg = Expression::fromJs($tokens);
-				if (!$arg) break;
-				$args[] = $arg;
-				if (!Symbol::fromJs($tokens, ",")) break;
-			}
-			if (!Symbol::fromJs($tokens, ")")) {
-				throw new Exception("Expected ')' after function arguments");
-			}
-			$func = new self("js", $func, $args);
-		}
 	}
 	public function toPhp ($indents) {
 		$func = $this->func;
@@ -1203,7 +1187,7 @@ class TypeofExpression {
 		$identifier = Identifier::fromJs($tokens);
 		if (!$identifier || $identifier->name !== 'typeof') {
 			$tokens->seek($start);
-			return FunctionExpressionLevelExpression::fromJs($tokens);
+			return FunctionCallLevelExpression::fromJs($tokens);
 		}
 		debug("found typeof expression");
 		$expression = TypeofExpression::fromJs($tokens);
@@ -1213,15 +1197,6 @@ class TypeofExpression {
 	public function toPhp ($indents) {
 		// TODO: handle the different cases here
 		return "gettype(" . $this->expression->toPhp($indents) . ")";
-	}
-}
-
-abstract class FunctionExpressionLevelExpression {
-	public static function fromJs ($tokens) {
-		// function expression gets precedence or else function(a,b) would be parsed as a function call
-		$expression = FunctionExpression::fromJs($tokens) or
-			$expression = FunctionCallExpression::fromJs($tokens);
-		return $expression;
 	}
 }
 
@@ -1352,7 +1327,32 @@ class AssignmentExpression extends Expression {
 	}
 }
 
-class VarDeclaration {
+class SingleVarDeclaration {
+	public function __construct ($declarator, $identifier) {
+		$this->declarator = $declarator;
+		$this->identifier = $identifier;
+	}
+	public static function fromJs ($tokens) {
+		debug("looking for single var declaration");
+		$declarator = null;
+		if (Keyword::fromJs($tokens, "var")) {
+			$declarator = "var";
+		}
+		if (!($identifier = Identifier::fromJs($tokens))) {
+			if ($declarator) {
+				throw new Exception("Expected identifier after '$declarator'");
+			}
+			return null;
+		}
+		debug("found single var declaration");
+		return new self($declarator, $identifier);
+	}
+	public function toPhp ($indents) {
+		return ($declarator ? ("$declarator ") : "") . $this->identifier->toPhp($indents);
+	}
+}
+
+class VarDefinitionStatement {
 	public function __construct ($pieces) {
 		$this->pieces = $pieces;
 	}
@@ -1366,7 +1366,7 @@ class VarDeclaration {
 		// get the multiple expressions
 		$pieces = array();
 		while ($tokens->valid()) {
-			// TODO: move some of this into VarDeclarationPiece?
+			// TODO: move some of this into VarDefinitionPiece?
 			$name = Identifier::fromJs($tokens);
 			if (!$name) break;
 			$val = null;
@@ -1374,7 +1374,7 @@ class VarDeclaration {
 			if (Symbol::fromJs($tokens, "=")) {
 				$val = Expression::fromJs($tokens);
 			}
-			$pieces[] = new VarDeclarationPiece($name, $val);
+			$pieces[] = new VarDefinitionPiece($name, $val);
 			if (!Symbol::fromJs($tokens, ",")) {
 				debug("end of var declaration");
 				break;
@@ -1400,7 +1400,9 @@ class Block {
 		$this->brace = $brace;
 	}
 	public static function fromJs ($tokens) {
+		debug("looking for block start");
 		$brace = false;
+		$temp = array_slice($tokens->getArrayCopy(), $tokens->key(), 10); var_dump($temp); // fdo
 		if (Symbol::fromJs($tokens, "{")) {
 			debug("found brace block start");
 			$brace = true;
@@ -1531,12 +1533,132 @@ class ExpressionStatement {
 	}
 }
 
+class ForLoop {
+	public function __construct ($init, $test, $update, $body) {
+		// statement
+		$this->init = $init;
+		// statement
+		$this->test = $test;
+		// expression or null
+		$this->update = $update;
+		// block
+		$this->body = $body;
+	}
+	public static function fromJs ($tokens) {
+		debug("looking for 'for' loop");
+		if (!Keyword::fromJs($tokens, "for")) return;
+		debug("found 'for' loop");
+		if (!Symbol::fromJs($tokens, "(")) {
+			throw new Exception("Expected '(' after 'for' keyword");
+		}
+		$init = VarDefinitionStatement::fromJs($tokens) or
+			$init = ExpressionStatement::fromJs($tokens) or
+			$init = EmptyStatement::fromJs($tokens);
+		if (!$init) throw new Exception("Expected for loop initialization");
+		$test = ExpressionStatement::fromJs($tokens) or
+			$test = EmptyStatement::fromJs($tokens);
+		if (!$test) throw new Exception("Expected for loop test");
+		$update = Expression::fromJs($tokens);
+		if (!Symbol::fromJs($tokens, ")")) {
+			throw new Exception("Expected ')' after for loop header");
+		}
+		$body = Block::fromJs($tokens);
+		if (!$body) throw new Exception("Expected for loop body");
+		return new self($init, $test, $update, $body);
+	}
+	public function toPhp ($indents) {
+		return "for (" .
+			$this->init->toPhp($indents) .
+			" " .
+			$this->test->toPhp($indents) . 
+			($this->update ? (" " . $this->update->toPhp($indents)) : "") . 
+			") " . $this->body->toPhp($indents . "\t") . "\n";
+		return $code;
+	}
+}
+
+class EmptyStatement {
+	private $instance = null;
+	public static function fromJs ($tokens) {
+		if (Symbol::fromJs($tokens, ";")) return self::instance();
+	}
+	public function instance () {
+		if (!isset($this->instance)) $this->instance = new self();
+		return $this->instance;
+	}
+	public function toPhp ($indents) {
+		return ";";
+	}
+}
+
+
+class WhileLoop {
+	// TODO
+}
+
+class ForInLoop {
+	public function __construct ($declaration, $object, $body) {
+		$this->declaration = $declaration;
+		$this->object = $object;
+		$this->body = $body;
+	}
+	public static function fromJs ($tokens) {
+		debug("looking for for...in loop");
+		$start = $tokens->key();
+		if (!Keyword::fromJs($tokens, "for")) return null;
+		if (!Symbol::fromJs($tokens, "(")) {
+			throw new Exception("Expected '(' after 'for' keyword");
+		}
+		if (!($declaration = SingleVarDeclaration::fromJs($tokens))) {
+			$tokens->seek($start);
+			return null;
+		}
+		if (!Keyword::fromJs($tokens, "in")) {
+			$tokens->seek($start);
+			return null;
+		}
+		debug("found for...in loop");
+		if (!($object = Expression::fromJs($tokens))) {
+			throw new Exception("Expected object after 'in' keyword");
+		}
+		if (!Symbol::fromJs($tokens, ")")) {
+			throw new Exception("Expected ')' after for...in loop object");
+		}
+		if (!($block = Block::fromJs($tokens))) {
+			throw new Exception("Expected block after for...in loop header");
+		}
+		return new self($declaration, $object, $body);
+	}
+	public function toPhp ($indents) {
+		return "for (" . 
+			$this->declaration->toPhp($indents) . 
+			" in " . 
+			$this->object->toPhp($indents) . 
+			") " . 
+			$this->body->toPhp($indents . "\t") . "\n";
+	}
+}
+
+class ForOfLoop {
+	// TODO
+}
+
+class DoWhileLoop {
+	// TODO
+}
+
 abstract class Statement {
 	public static function fromJs ($tokens) {
-		$statement = VarDeclaration::fromJs($tokens) or
+		$statement = EmptyStatement::fromJs($tokens) or
+			$statement = VarDefinitionStatement::fromJs($tokens) or
 			$statement = IfStatement::fromJs($tokens) or
 			$statement = ReturnStatement::fromJs($tokens) or
 			$statement = ThrowStatement::fromJs($tokens) or
+			// for in loop first because the code in there allows for a 'for'
+			// that is something else, but not vice versa
+			$statement = ForInLoop::fromJs($tokens) or
+			$statement = ForLoop::fromJs($tokens) or
+			$statement = FunctionDeclaration::fromJs($tokens) or
 			$statement = ExpressionStatement::fromJs($tokens);
 		return $statement;
 	}

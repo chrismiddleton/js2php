@@ -1041,7 +1041,7 @@ class DecimalNumberExpression extends Expression {
 			}
 		}
 		$object = new self($pos, $int, $dec, $expPos, $exp);
-		debug("found number " . $object->toPhp());
+		debug("found number " . $object->toPhp(""));
 		return $object;
 		
 	}

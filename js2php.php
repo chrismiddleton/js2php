@@ -1059,6 +1059,28 @@ class DecimalNumberExpression extends Expression {
 	}
 }
 
+class RegexExpression extends Expression {
+	public function __construct ($token) {
+		$this->token = $token;
+	}
+	public static function fromJs ($tokens) {
+		$start = $tokens->key();
+		debug("looking for regex expression");
+		Comments::fromJs($tokens);
+		$token = $tokens->current();
+		if (!$token || !($token instanceof RegexToken)) {
+			$tokens->seek($start);
+			return null;
+		}
+		$tokens->next();
+		return new self($token);
+	}
+	public function toPhp ($indents) {
+		// TODO: needs to be a string, for one
+		return (string) $this->token;
+	}
+}
+
 class ArrayExpression extends Expression {
 	public function __construct ($elements) {
 		$this->elements = $elements;
@@ -1151,8 +1173,8 @@ abstract class SimpleExpression extends Expression {
 			$expression = DecimalNumberExpression::fromJs($tokens) or
 // 			$expression = HexadecimalNumberExpression::fromJs($tokens) or
 			$expression = DoubleQuotedStringExpression::fromJs($tokens) or
-			$expression = SingleQuotedStringExpression::fromJs($tokens)
-// 			or $expression = RegexLiteralExpression::fromJs($tokens)
+			$expression = SingleQuotedStringExpression::fromJs($tokens) or
+			$expression = RegexExpression::fromJs($tokens)
 		;
 		return $expression;
 	}

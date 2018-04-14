@@ -1219,17 +1219,6 @@ class DotPropertyAccessExpression extends Expression {
 	}
 }
 
-class SubtractExpression extends Expression {
-	public function __construct ($a, $b) {
-		$this->a = $a;
-		$this->b = $b;
-	}
-	// TODO: fromJs
-	public function toPhp ($indents = "") {
-		return $this->a->toPhp($indents) . " - " . $this->b->toPhp($indents);
-	}
-}
-
 class IndexExpression extends Expression {
 	public function __construct ($object, $index) {
 		$this->object = $object;
@@ -1323,8 +1312,9 @@ class FunctionCallExpression extends Expression {
 						// TODO: handle all the cases of different numbers of params correctly
 						array(
 							$params[0],
-							new SubtractExpression(
+							new AdditiveExpression(
 								$params[1],
+								"-",
 								$params[0]
 							)
 						)
@@ -1364,6 +1354,7 @@ class TypeofExpression {
 }
 
 function parseLeftAssociativeBinaryExpression ($tokens, $class, $symbols, $parseSymbol, $parseSubexpression) {
+	debug("looking for $class");
 	$start = $tokens->key();
 	$a = $parseSubexpression($tokens);
 	if (!$a) return;

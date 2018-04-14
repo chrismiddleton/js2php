@@ -1341,11 +1341,10 @@ class TypeofExpression {
 	}
 }
 
-function parseLeftAssociativeBinaryExpression ($class, $parseSubexpression, $symbols, $parseSymbol) {
+function parseLeftAssociativeBinaryExpression ($tokens, $class, $symbols, $parseSymbol, $parseSubexpression) {
 	$start = $tokens->key();
 	$a = $parseSubexpression($tokens);
 	if (!$a) return;
-	$symbols = self::get
 	while ($tokens->valid()) {
 		$symbolFound = null;
 		foreach ($symbols as $symbol) {
@@ -1363,13 +1362,80 @@ function parseLeftAssociativeBinaryExpression ($class, $parseSubexpression, $sym
 	return $a;
 }
 
-class ComparisonExpression extends Expression {
+class MultiplicativeExpression extends Expression {
+	public function __construct ($a, $symbol, $b) {
+		$this->a = $a;
+		$this->symbol = $symbol;
+		$this->b = $b;
+	}
 	public static function fromJs ($tokens) {
 		return parseLeftAssociativeBinaryExpression(
+			$tokens,
 			__CLASS__,
-			array('InExpression', 'fromJs'),
-			array('===', '!==', '==', '!='),
-			array('Symbol', 'fromJs')
+			array('*', '/', '%'),
+			array('Symbol', 'fromJs'),
+			// TODO: this should be ** (exponentiation)
+			array('TypeofExpression', 'fromJs')
+		);
+	}
+	public function toPhp ($indents) {
+		return $this->a->toPhp($indents) . " {$this->symbol} " . $this->b->toPhp($indents);
+	}
+}
+
+class AdditiveExpression extends Expression {
+	public function __construct ($a, $symbol, $b) {
+		$this->a = $a;
+		$this->symbol = $symbol;
+		$this->b = $b;
+	}
+	public static function fromJs ($tokens) {
+		return parseLeftAssociativeBinaryExpression(
+			$tokens,
+			__CLASS__,
+			array('+', '-'),
+			array('Symbol', 'fromJs'),
+			array('MultiplicativeExpression', 'fromJs')
+		);
+	}
+	public function toPhp ($indents) {
+		return $this->a->toPhp($indents) . " {$this->symbol} " . $this->b->toPhp($indents);
+	}
+}
+
+class BitwiseShiftExpression extends Expression {
+	public function __construct ($a, $symbol, $b) {
+		$this->a = $a;
+		$this->symbol = $symbol;
+		$this->b = $b;
+	}
+	public static function fromJs ($tokens) {
+		return parseLeftAssociativeBinaryExpression(
+			$tokens,
+			__CLASS__,
+			array('<<', '>>', '>>>'),
+			array('Symbol', 'fromJs'),
+			array('AdditiveExpression', 'fromJs')
+		);
+	}
+	public function toPhp ($indents) {
+		return $this->a->toPhp($indents) . " {$this->symbol} " . $this->b->toPhp($indents);
+	}
+}
+
+class ComparisonExpression extends Expression {
+	public function __construct ($a, $symbol, $b) {
+		$this->a = $a;
+		$this->symbol = $symbol;
+		$this->b = $b;
+	}
+	public static function fromJs ($tokens) {
+		return parseLeftAssociativeBinaryExpression(
+			$tokens,
+			__CLASS__,
+			array('<', '<=', '>', '>=', 'in', 'instanceof'),
+			array('Symbol', 'fromJs'),
+			array('BitwiseShiftExpression', 'fromJs')
 		);
 	}
 	public function toPhp ($indents) {
@@ -1384,61 +1450,116 @@ class EqualityExpression extends Expression {
 		$this->b = $b;
 	}
 	public static function fromJs ($tokens) {
-		$start = $tokens->key();
-		$a = TypeofExpression::fromJs($tokens);
-		if (!$a) return;
-		$start = $tokens->key();
-		$symbols = array("===", "!==", "==", "!=");
-		$symbolFound = null;
-		foreach ($symbols as $symbol) {
-			if (Symbol::fromJs($tokens, $symbol)) {
-				$symbolFound = $symbol;
-				break;
-			}
-		}
-		if (!$symbolFound) {
-			$tokens->seek($start);
-			return $a;
-		}
-		debug("found '$symbolFound' expression");
-		$b = TypeofExpression::fromJs($tokens);
-		if (!$b) throw new Exception("Expected right-hand side after '$symbolFound'");
-		return new self ($a, $symbolFound, $b);
+		return parseLeftAssociativeBinaryExpression(
+			$tokens,
+			__CLASS__,
+			array('===', '!==', '==', '!='),
+			array('Symbol', 'fromJs'),
+			array('ComparisonExpression', 'fromJs')
+		);
 	}
 	public function toPhp ($indents) {
 		return $this->a->toPhp($indents) . " {$this->symbol} " . $this->b->toPhp($indents);
 	}
 }
 
-class BooleanOperationExpression extends Expression {
-	public function __construct ($a, $operator, $b) {
+class BitwiseAndExpression extends Expression {
+	public function __construct ($a, $symbol, $b) {
 		$this->a = $a;
-		$this->operator = $operator;
+		$this->symbol = $symbol;
 		$this->b = $b;
 	}
 	public static function fromJs ($tokens) {
-		$start = $tokens->key();
-		$a = EqualityExpression::fromJs($tokens);
-		if (!$a) return;
-		$start = $tokens->key();
-		$operators = array("&&", "||");
-		$operatorFound = null;
-		foreach ($operators as $operator) {
-			if (Symbol::fromJs($tokens, $operator)) {
-				$operatorFound = $operator;
-			}
-		}
-		if (!$operatorFound) {
-			$tokens->seek($start);
-			return $a;
-		}
-		debug("found '$operatorFound' expression");
-		$b = EqualityExpression::fromJs($tokens);
-		if (!$b) throw new Exception("Expected right-hand side after '&&'");
-		return new self ($a, $operatorFound, $b);
+		return parseLeftAssociativeBinaryExpression(
+			$tokens,
+			__CLASS__,
+			array('&'),
+			array('Symbol', 'fromJs'),
+			array('EqualityExpression', 'fromJs')
+		);
 	}
 	public function toPhp ($indents) {
-		return $this->a->toPhp($indents) . " {$this->operator} " . $this->b->toPhp($indents);
+		return $this->a->toPhp($indents) . " {$this->symbol} " . $this->b->toPhp($indents);
+	}
+}
+
+class BitwiseXorExpression extends Expression {
+	public function __construct ($a, $symbol, $b) {
+		$this->a = $a;
+		$this->symbol = $symbol;
+		$this->b = $b;
+	}
+	public static function fromJs ($tokens) {
+		return parseLeftAssociativeBinaryExpression(
+			$tokens,
+			__CLASS__,
+			array('^'),
+			array('Symbol', 'fromJs'),
+			array('BitwiseAndExpression', 'fromJs')
+		);
+	}
+	public function toPhp ($indents) {
+		return $this->a->toPhp($indents) . " {$this->symbol} " . $this->b->toPhp($indents);
+	}
+}
+
+class BitwiseOrExpression extends Expression {
+	public function __construct ($a, $symbol, $b) {
+		$this->a = $a;
+		$this->symbol = $symbol;
+		$this->b = $b;
+	}
+	public static function fromJs ($tokens) {
+		return parseLeftAssociativeBinaryExpression(
+			$tokens,
+			__CLASS__,
+			array('|'),
+			array('Symbol', 'fromJs'),
+			array('BitwiseXorExpression', 'fromJs')
+		);
+	}
+	public function toPhp ($indents) {
+		return $this->a->toPhp($indents) . " {$this->symbol} " . $this->b->toPhp($indents);
+	}
+}
+
+class LogicalAndExpression extends Expression {
+	public function __construct ($a, $symbol, $b) {
+		$this->a = $a;
+		$this->symbol = $symbol;
+		$this->b = $b;
+	}
+	public static function fromJs ($tokens) {
+		return parseLeftAssociativeBinaryExpression(
+			$tokens,
+			__CLASS__,
+			array('&&'),
+			array('Symbol', 'fromJs'),
+			array('BitwiseOrExpression', 'fromJs')
+		);
+	}
+	public function toPhp ($indents) {
+		return $this->a->toPhp($indents) . " {$this->symbol} " . $this->b->toPhp($indents);
+	}
+}
+
+class LogicalOrExpression extends Expression {
+	public function __construct ($a, $symbol, $b) {
+		$this->a = $a;
+		$this->symbol = $symbol;
+		$this->b = $b;
+	}
+	public static function fromJs ($tokens) {
+		return parseLeftAssociativeBinaryExpression(
+			$tokens,
+			__CLASS__,
+			array('||'),
+			array('Symbol', 'fromJs'),
+			array('LogicalAndExpression', 'fromJs')
+		);
+	}
+	public function toPhp ($indents) {
+		return $this->a->toPhp($indents) . " {$this->symbol} " . $this->b->toPhp($indents);
 	}
 }
 
@@ -1449,7 +1570,7 @@ class TernaryExpression extends Expression {
 		$this->no = $no;
 	}
 	public static function fromJs ($tokens) {
-		$test = BooleanOperationExpression::fromJs($tokens);
+		$test = LogicalOrExpression::fromJs($tokens);
 		if (!$test) return;
 		$afterTest = $tokens->key();
 		if (!Symbol::fromJs($tokens, "?")) {
@@ -1457,13 +1578,13 @@ class TernaryExpression extends Expression {
 			return $test;
 		}
 		debug("found ternary expression");
-		if (!($yes = BooleanOperationExpression::fromJs($tokens))) {
+		if (!($yes = LogicalOrExpression::fromJs($tokens))) {
 			throw new TokenException($tokens, "Expected 'yes' value after start of ternary ('?')");
 		}
 		if (!Symbol::fromJs($tokens, ":")) {
 			throw new TokenException($tokens, "Expected ':' after yes value in ternary");
 		}
-		if (!($no = BooleanOperationExpression::fromJs($tokens))) {
+		if (!($no = LogicalOrExpression::fromJs($tokens))) {
 			throw new TokenException($tokens, "Expected 'no' value after ':' in ternary expression");
 		}
 		return new self($test, $yes, $no);

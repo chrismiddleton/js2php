@@ -1200,6 +1200,42 @@ class TypeofExpression {
 	}
 }
 
+function parseLeftAssociativeBinaryExpression ($class, $parseSubexpression, $symbols, $parseSymbol) {
+	$start = $tokens->key();
+	$a = $parseSubexpression($tokens);
+	if (!$a) return;
+	$symbols = self::get
+	while ($tokens->valid()) {
+		$symbolFound = null;
+		foreach ($symbols as $symbol) {
+			if ($parseSymbol($tokens, $symbol)) {
+				$symbolFound = $symbol;
+				break;
+			}
+		}
+		if (!$symbolFound) break;
+		debug("found '$symbolFound' expression");
+		$b = $parseSubexpression($tokens);
+		if (!$b) throw new Exception("Expected right-hand side after '$symbolFound'");
+		$a = new $class($a, $symbolFound, $b);
+	}
+	return $a;
+}
+
+class ComparisonExpression extends Expression {
+	public static function fromJs ($tokens) {
+		return parseLeftAssociativeBinaryExpression(
+			__CLASS__,
+			array('InExpression', 'fromJs'),
+			array('===', '!==', '==', '!='),
+			array('Symbol', 'fromJs')
+		);
+	}
+	public function toPhp ($indents) {
+		return $this->a->toPhp($indents) . " {$this->symbol} " . $this->b->toPhp($indents);
+	}
+}
+
 class EqualityExpression extends Expression {
 	public function __construct ($a, $symbol, $b) {
 		$this->a = $a;

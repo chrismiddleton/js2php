@@ -118,10 +118,16 @@ class StringParser {
 	}
 }
 
-abstract class Token {}
+abstract class Token {
+	public function __construct ($parser) {
+		$this->lineNum = $parser->getLineNum();
+		$this->colNum = $parser->getColNum();
+	}
+}
 
 class MultilineCommentToken extends Token {
-	public function __construct ($text) {
+	public function __construct ($parser, $text) {
+		parent::__construct($parser);
 		$this->text = $text;
 	}
 	public static function parse ($parser) {
@@ -131,12 +137,16 @@ class MultilineCommentToken extends Token {
 			if ($parser->readString("*/")) break;
 			$text .= $parser->read();
 		}
-		return new self($text);
+		return new self($parser, $text);
+	}
+	public function __toString () {
+		return "/*" . $this->text . "*/";
 	}
 }
 
 class SingleLineCommentToken extends Token {
-	public function __construct ($text) {
+	public function __construct ($parser, $text) {
+		parent::__construct($parser);
 		$this->text = $text;
 	}
 	public static function parse ($parser) {
@@ -148,12 +158,16 @@ class SingleLineCommentToken extends Token {
 			}
 			$text .= $parser->read();
 		}
-		return new self($text);
+		return new self($parser, $text);
+	}
+	public function __toString () {
+		return "//" . $this->text;
 	}
 }
 
-class JsIdentifierToken extends Token {
-	public function __construct ($name) {
+class JsIdentifierToken extends SymbolToken {
+	public function __construct ($parser, $name) {
+		parent::__construct($parser, $name);
 		$this->name = $name;
 	}
 	public static function parse ($parser) {
@@ -171,24 +185,33 @@ class JsIdentifierToken extends Token {
 			$name .= $c;
 			$parser->advance();
 		}
-		return new self($name);
+		return new self($parser, $name);
+	}
+	public function __toString () {
+		return $this->name;
 	}
 }
 
+// TODO: move this above JsIdentifierToken
 class SymbolToken extends Token {
-	public function __construct ($symbol) {
+	public function __construct ($parser, $symbol) {
+		parent::__construct($parser);
 		$this->symbol = $symbol;
 	}
 	public static function parse ($parser, $symbols) {
 		foreach ($symbols as $symbol) {
 			$str = $parser->readString($symbol);
-			if ($str) return new self($str);
+			if ($str) return new self($parser, $str);
 		}
+	}
+	public function __toString () {
+		return $this->symbol;
 	}
 }
 
 class SpaceToken extends Token {
-	public function __construct ($space) {
+	public function __construct ($parser, $space) {
+		parent::__construct($parser);
 		$this->space = $space;
 	}
 	public static function parse ($parser) {
@@ -199,12 +222,16 @@ class SpaceToken extends Token {
 			$text .= $c;
 			$parser->advance();
 		}
-		return strlen($text) ? new self($text) : null;
+		return strlen($text) ? new self($parser, $text) : null;
+	}
+	public function __toString () {
+		return $this->text;
 	}
 }
 
 class NumberToken extends Token {
-	public function __construct ($text) {
+	public function __construct ($parser, $text) {
+		parent::__construct($parser);
 		$this->text = $text;
 	}
 	public static function parse ($parser) {
@@ -215,12 +242,16 @@ class NumberToken extends Token {
 			$number .= $c;
 			$parser->advance();
 		}
-		return strlen($number) ? new self($number) : null;
+		return strlen($number) ? new self($parser, $number) : null;
+	}
+	public function __toString () {
+		return $this->text;
 	}
 }
 
 class DoubleQuotedStringToken extends Token {
-	public function __construct ($text) {
+	public function __construct ($parser, $text) {
+		parent::__construct($parser);
 		$this->text = $text;
 	}
 	public static function parse ($parser) {
@@ -237,12 +268,17 @@ class DoubleQuotedStringToken extends Token {
 				$text .= $parser->read();
 			}
 		}
-		return new self($text);
+		return new self($parser, $text);
+	}
+	public function __toString () {
+		// TODO: single vs quoted
+		return var_export($this->text, true);
 	}
 }
 
 class SingleQuotedStringToken extends Token {
-	public function __construct ($text) {
+	public function __construct ($parser, $text) {
+		parent::__construct($parser);
 		$this->text = $text;
 	}
 	public static function parse ($parser) {
@@ -259,13 +295,29 @@ class SingleQuotedStringToken extends Token {
 				$text .= $parser->read();
 			}
 		}
-		return new self($text);
+		return new self($parser, $text);
+	}
+	public function __toString () {
+		// TODO: single vs quoted
+		return var_export($this->text, true);
 	}
 }
 
 class RegexCharacter {
 	public function __construct ($character) {
 		$this->character = $character;
+	}
+	public function __toString () {
+		return $this->character;
+	}
+}
+
+class RegexEscapedCharacter {
+	public function __construct ($character) {
+		$this->character = $character;
+	}
+	public function __toString () {
+		return "\\" . $this->character;
 	}
 }
 
@@ -288,7 +340,7 @@ abstract class RegexSimpleElement {
 			$parser->advance();
 			$c = $parser->read();
 			if ($c == null) return null;
-			return new RegexCharacter($c);
+			return new RegexEscapedCharacter($c);
 		} else if (!$inCharacterClass && strpos("|?*+", $c) !== false) {
 			// Those characters are interpreted specially when we are outside of a character class
 			// (TODO: there are others too, but we aren't allowing for them at the moment)
@@ -361,6 +413,9 @@ class RegexCharacterClass {
 		}
 	
 	}
+	public function __toString () {
+		return "[" . ($this->negated ? "^" : "") . implode("", $this->elements) . "]";
+	}
 
 }
 
@@ -406,6 +461,9 @@ class RegexQuantifiedElement {
 			// TODO: handle all the other quantifier cases like *?, +?, etc.
 		}
 	}
+	public function __toString () {
+		return $this->element . $this->quantifier;
+	}
 	
 }
 
@@ -432,10 +490,18 @@ class RegexSequence {
 			return null;
 		}
 	}
+	
+	public function __toString () {
+		return implode("", $this->elements);
+	}
 
 }
 
-class RegexEmptyElement {}
+class RegexEmptyElement {
+	public function __toString () {
+		return "";
+	}
+}
 
 class RegexAlternation {
 
@@ -463,6 +529,9 @@ class RegexAlternation {
 		if (count($elements) === 1) return $elements[0];
 		return new self($elements);
 	}
+	public function __toString () {
+		return implode("|", $this->elements);
+	}
 
 }
 
@@ -470,7 +539,8 @@ class RegexAlternation {
 // ending when we come upon an ending slash, which would prevent us from having to tell the lower regex elements
 // about things like "|" and "?", etc
 class RegexToken extends Token {
-	public function __construct ($elements, $flags) {
+	public function __construct ($parser, $elements, $flags) {
+		parent::__construct($parser);
 		$this->elements = $elements;
 		$this->flags = $flags;
 	}
@@ -513,7 +583,10 @@ class RegexToken extends Token {
 			$flags .= $c;
 			$parser->advance();
 		}
-		return new self($elements, $flags);
+		return new self($parser, $elements, $flags);
+	}
+	public function __toString () {
+		return "/" . implode("", $this->elements) . "/" . $this->flags;
 	}
 }
 
@@ -721,6 +794,19 @@ class VarDefinitionPiece {
 	}
 }
 
+class TokenException extends Exception {
+	public function __construct ($tokens, $message) {
+		$token = $tokens->current();
+		if ($token) {
+			$message .= " on line {$token->lineNum}, col {$token->colNum}, got " . 
+				get_class($token) . " ($token) instead";
+		} else {
+			$message .= ", got end of file instead";
+		}
+		$this->message = $message;
+	}
+}
+
 class ParenthesizedExpression extends Expression {
 	public function __construct ($expression) {
 		$this->expression = $expression;
@@ -734,10 +820,10 @@ class ParenthesizedExpression extends Expression {
 		debug("found parenthesized expression start");
 		$expression = Expression::fromJs($tokens);
 		if (!$expression) {
-			throw new Exception("Expected expression after '('");
+			throw new TokenException($tokens, "Expected expression after '('");
 		}
 		if (!Symbol::fromJs($tokens, ")")) {
-			throw new Exception("Expected ')' after expression");
+			throw new TokenException($tokens, "Expected ')' after expression");
 		}
 		return new self($expression);
 	}
@@ -988,7 +1074,7 @@ class ArrayExpression extends Expression {
 			if (!Symbol::fromJs($tokens, ",")) break;
 		}
 		if (!Symbol::fromJs($tokens, "]")) {
-			throw new Exception("Expected ']' after array expression");
+			throw new TokenException($tokens, "Expected ']' after array expression");
 		}
 		debug("found array expression");
 		return new self($elements);
@@ -1033,13 +1119,13 @@ class ObjectExpression extends Expression {
 				return null;
 			}
 			if (!($val = Expression::fromJs($tokens))) {
-				throw new Exception("Expected value after ':' in object");
+				throw new TokenException($tokens, "Expected value after ':' in object");
 			}
 			$pairs[] = new ObjectPair($key, $val);
 			if (!Symbol::fromJs($tokens, ",")) break;
 		}
 		if (!Symbol::fromJs($tokens, "}")) {
-			throw new Exception("Expected closing '}' after object");
+			throw new TokenException($tokens, "Expected closing '}' after object");
 		}
 		debug("found object expression");
 		return new self($pairs);
@@ -1082,7 +1168,7 @@ class NotExpression extends Expression {
 		}
 		debug("found '!' expression");
 		$expression = self::fromJs($tokens);
-		if (!$expression) throw new Exception("Expected expression after '!'");
+		if (!$expression) throw new TokenException($tokens, "Expected expression after '!'");
 		return new self($expression);
 	}
 	public function toPhp ($indents) {
@@ -1165,7 +1251,7 @@ abstract class FunctionCallLevelExpression extends Expression {
 					if (!Symbol::fromJs($tokens, ",")) break;
 				}
 				if (!Symbol::fromJs($tokens, ")")) {
-					throw new Exception("Expected ')' after function arguments");
+					throw new TokenException($tokens, "Expected ')' after function arguments");
 				}
 				$expression = new FunctionCallExpression("js", $expression, $args);
 			} else if (Symbol::fromJs($tokens, ".")) {
@@ -1178,7 +1264,7 @@ abstract class FunctionCallLevelExpression extends Expression {
 				debug("found property access with '[]'");
 				$property = Expression::fromJs($tokens);
 				if (!Symbol::fromJs($tokens, "]")) {
-					throw new Exception("Expected ']' after property expression");
+					throw new TokenException($tokens, "Expected ']' after property expression");
 				}
 				$expression = new BracketPropertyAccessExpression($expression, $property);
 			} else {
@@ -1246,7 +1332,7 @@ class TypeofExpression {
 		}
 		debug("found typeof expression");
 		$expression = TypeofExpression::fromJs($tokens);
-		if (!$expression) throw new Exception("Expected expression after 'typeof'");
+		if (!$expression) throw new TokenException($tokens, "Expected expression after 'typeof'");
 		return new self($expression);
 	}
 	public function toPhp ($indents) {
@@ -1271,7 +1357,7 @@ function parseLeftAssociativeBinaryExpression ($class, $parseSubexpression, $sym
 		if (!$symbolFound) break;
 		debug("found '$symbolFound' expression");
 		$b = $parseSubexpression($tokens);
-		if (!$b) throw new Exception("Expected right-hand side after '$symbolFound'");
+		if (!$b) throw new TokenException($tokens, "Expected right-hand side after '$symbolFound'");
 		$a = new $class($a, $symbolFound, $b);
 	}
 	return $a;
@@ -1372,13 +1458,13 @@ class TernaryExpression extends Expression {
 		}
 		debug("found ternary expression");
 		if (!($yes = BooleanOperationExpression::fromJs($tokens))) {
-			throw new Exception("Expected 'yes' value after start of ternary ('?')");
+			throw new TokenException($tokens, "Expected 'yes' value after start of ternary ('?')");
 		}
 		if (!Symbol::fromJs($tokens, ":")) {
-			throw new Exception("Expected ':' after yes value in ternary");
+			throw new TokenException($tokens, "Expected ':' after yes value in ternary");
 		}
 		if (!($no = BooleanOperationExpression::fromJs($tokens))) {
-			throw new Exception("Expected 'no' value after ':' in ternary expression");
+			throw new TokenException($tokens, "Expected 'no' value after ':' in ternary expression");
 		}
 		return new self($test, $yes, $no);
 	}
@@ -1410,7 +1496,7 @@ class AssignmentExpression extends Expression {
 		}
 		debug("found '{$symbolFound->symbol}' expression");
 		$right = AssignmentExpression::fromJs($tokens);
-		if (!$right) throw new Exception("Expected RHS of assignment");
+		if (!$right) throw new TokenException($tokens, "Expected RHS of assignment");
 		return new self($left, $symbol, $right);
 	}
 	public function toPhp ($indents) {
@@ -1431,7 +1517,7 @@ class SingleVarDeclaration {
 		}
 		if (!($identifier = Identifier::fromJs($tokens))) {
 			if ($declarator) {
-				throw new Exception("Expected identifier after '$declarator'");
+				throw new TokenException($tokens, "Expected identifier after '$declarator'");
 			}
 			return null;
 		}
@@ -1506,7 +1592,7 @@ class Block {
 			if (!$brace) break;
 		}
 		if ($brace) {
-			if (!Symbol::fromJs($tokens, "}")) throw new Exception("Expected closing '}' after block");
+			if (!Symbol::fromJs($tokens, "}")) throw new TokenException($tokens, "Expected closing '}' after block");
 		}
 		return new self($statements, $brace);
 	}
@@ -1558,11 +1644,11 @@ class IfStatement {
 		}
 		debug("found if statement");
 		if (!Symbol::fromJs($tokens, "(")) {
-			throw new Exception("Expected '(' after if");
+			throw new TokenException($tokens, "Expected '(' after if");
 		}
 		$condition = Expression::fromJs($tokens);
 		if (!Symbol::fromJs($tokens, ")")) {
-			throw new Exception("Expected ')' after if condition");
+			throw new TokenException($tokens, "Expected ')' after if condition");
 		}
 		$ifBlock = Block::fromJs($tokens);
 		if (Keyword::fromJs($tokens, "else")) {
@@ -1640,21 +1726,21 @@ class ForLoop {
 		if (!Keyword::fromJs($tokens, "for")) return;
 		debug("found 'for' loop");
 		if (!Symbol::fromJs($tokens, "(")) {
-			throw new Exception("Expected '(' after 'for' keyword");
+			throw new TokenException($tokens, "Expected '(' after 'for' keyword");
 		}
 		$init = VarDefinitionStatement::fromJs($tokens) or
 			$init = ExpressionStatement::fromJs($tokens) or
 			$init = EmptyStatement::fromJs($tokens);
-		if (!$init) throw new Exception("Expected for loop initialization");
+		if (!$init) throw new TokenException($tokens, "Expected for loop initialization");
 		$test = ExpressionStatement::fromJs($tokens) or
 			$test = EmptyStatement::fromJs($tokens);
-		if (!$test) throw new Exception("Expected for loop test");
+		if (!$test) throw new TokenException($tokens, "Expected for loop test");
 		$update = Expression::fromJs($tokens);
 		if (!Symbol::fromJs($tokens, ")")) {
-			throw new Exception("Expected ')' after for loop header");
+			throw new TokenException($tokens, "Expected ')' after for loop header");
 		}
 		$body = Block::fromJs($tokens);
-		if (!$body) throw new Exception("Expected for loop body");
+		if (!$body) throw new TokenException($tokens, "Expected for loop body");
 		return new self($init, $test, $update, $body);
 	}
 	public function toPhp ($indents) {
@@ -1698,7 +1784,7 @@ class ForInLoop {
 		$start = $tokens->key();
 		if (!Keyword::fromJs($tokens, "for")) return null;
 		if (!Symbol::fromJs($tokens, "(")) {
-			throw new Exception("Expected '(' after 'for' keyword");
+			throw new TokenException($tokens, "Expected '(' after 'for' keyword");
 		}
 		if (!($declaration = SingleVarDeclaration::fromJs($tokens))) {
 			$tokens->seek($start);
@@ -1710,13 +1796,13 @@ class ForInLoop {
 		}
 		debug("found for...in loop");
 		if (!($object = Expression::fromJs($tokens))) {
-			throw new Exception("Expected object after 'in' keyword");
+			throw new TokenException($tokens, "Expected object after 'in' keyword");
 		}
 		if (!Symbol::fromJs($tokens, ")")) {
-			throw new Exception("Expected ')' after for...in loop object");
+			throw new TokenException($tokens, "Expected ')' after for...in loop object");
 		}
 		if (!($block = Block::fromJs($tokens))) {
-			throw new Exception("Expected block after for...in loop header");
+			throw new TokenException($tokens, "Expected block after for...in loop header");
 		}
 		return new self($declaration, $object, $body);
 	}
@@ -1821,15 +1907,15 @@ class FunctionDeclaration {
 			if (!Symbol::fromJs($tokens, ",")) break;
 		}
 		if (!Symbol::fromJs($tokens, ")")) {
-			throw new Exception("Expected closing ')' after function parameters");
+			throw new TokenException($tokens, "Expected closing ')' after function parameters");
 		}
 		if (!Symbol::fromJs($tokens, "{")) {
-			throw new Exception("Expected opening '{' after function parameters");
+			throw new TokenException($tokens, "Expected opening '{' after function parameters");
 		}
 		$body = FunctionBody::fromJs($tokens);
 		$token = $tokens->current();
 		if (!Symbol::fromJs($tokens, "}")) {
-			throw new Exception("Expected closing '}' after function body");
+			throw new TokenException($tokens, "Expected closing '}' after function body");
 		}
 		return new self($name, $params, $body);
 	}
@@ -1882,15 +1968,15 @@ class FunctionExpression extends Expression {
 			if (!Symbol::fromJs($tokens, ",")) break;
 		}
 		if (!Symbol::fromJs($tokens, ")")) {
-			throw new Exception("Expected closing ')' after function parameters");
+			throw new TokenException($tokens, "Expected closing ')' after function parameters");
 		}
 		if (!Symbol::fromJs($tokens, "{")) {
-			throw new Exception("Expected opening '{' after function parameters");
+			throw new TokenException($tokens, "Expected opening '{' after function parameters");
 		}
 		$body = FunctionBody::fromJs($tokens);
 		$token = $tokens->current();
 		if (!Symbol::fromJs($tokens, "}")) {
-			throw new Exception("Expected closing '}' after function body");
+			throw new TokenException($tokens, "Expected closing '}' after function body");
 		}
 		return new self($name, $params, $body);
 	}
@@ -1926,7 +2012,7 @@ class Program {
 					;
 				} else {
 					$token = $tokens->current();
-					throw new Exception("Unexpected token: " . var_export($token, true));
+					throw new TokenException($tokens, "Unexpected token");
 				}
 			} catch (Exception $e) {
 // 				var_dump($program); // fdo

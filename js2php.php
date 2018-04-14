@@ -1700,7 +1700,6 @@ class Block {
 	public static function fromJs ($tokens) {
 		debug("looking for block start");
 		$brace = false;
-		$temp = array_slice($tokens->getArrayCopy(), $tokens->key(), 10); var_dump($temp); // fdo
 		if (Symbol::fromJs($tokens, "{")) {
 			debug("found brace block start");
 			$brace = true;

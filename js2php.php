@@ -604,7 +604,7 @@ class JsTokenizer {
 			"/=", "/",
 			"%=", "%",
 			"<<=", "<<", "<=", "<",
-			">>>=", ">>>", ">>=", ">>", ">", ">=",
+			">>>=", ">>>", ">>=", ">>", ">=", ">",
 			"~=", "~",
 			"^=", "^",
 			"&=", "&&", "&",
@@ -1536,7 +1536,7 @@ class ComparisonExpression extends Expression {
 		return parseLeftAssociativeBinaryExpression(
 			$tokens,
 			__CLASS__,
-			array('<', '<=', '>', '>=', 'in', 'instanceof'),
+			array('<=', '<', '>=', '>', 'in', 'instanceof'),
 			array('Symbol', 'fromJs'),
 			array('BitwiseShiftExpression', 'fromJs')
 		);

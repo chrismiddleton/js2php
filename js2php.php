@@ -1952,11 +1952,7 @@ class VarDefinitionStatement {
 		$this->pieces = $pieces;
 	}
 	public static function fromJs (ArrayIterator $tokens) {
-		$start = $tokens->key();
-		if (!Keyword::fromJs($tokens, "var")) {
-			$tokens->seek($start);
-			return;
-		}
+		if (!Keyword::fromJs($tokens, "var")) return null;
 		debug("found var declaration");
 		// get the multiple expressions
 		$pieces = array();
@@ -2029,11 +2025,7 @@ class ReturnStatement {
 		$this->value = $value;
 	}
 	public static function fromJs ($tokens) {
-		$start = $tokens->key();
-		if (!Keyword::fromJs($tokens, "return")) {
-			$tokens->seek($start);
-			return;
-		}
+		if (!Keyword::fromJs($tokens, "return")) return;
 		debug("found return statement");
 		// can be null, that's OK
 		$value = Expression::fromJs($tokens);
@@ -2054,11 +2046,7 @@ class IfStatement {
 		$this->elseBlock = $elseBlock;
 	}
 	public static function fromJs ($tokens) {
-		$start = $tokens->key();
-		if (!Keyword::fromJs($tokens, "if")) {
-			$tokens->seek($start);
-			return;
-		}
+		if (!Keyword::fromJs($tokens, "if")) return null;
 		debug("found if statement");
 		if (!Symbol::fromJs($tokens, "(")) {
 			throw new TokenException($tokens, "Expected '(' after if");
@@ -2091,11 +2079,7 @@ class ThrowStatement {
 		$this->value = $value;
 	}
 	public static function fromJs ($tokens) {
-		$start = $tokens->key();
-		if (!Keyword::fromJs($tokens, "throw")) {
-			$tokens->seek($start);
-			return;
-		}
+		if (!Keyword::fromJs($tokens, "throw")) return null;
 		debug("found throw statement");
 		// can be null, that's OK
 		$value = Expression::fromJs($tokens);
@@ -2140,7 +2124,7 @@ class ForLoop {
 	}
 	public static function fromJs ($tokens) {
 		debug("looking for 'for' loop");
-		if (!Keyword::fromJs($tokens, "for")) return;
+		if (!Keyword::fromJs($tokens, "for")) return null;
 		debug("found 'for' loop");
 		if (!Symbol::fromJs($tokens, "(")) {
 			throw new TokenException($tokens, "Expected '(' after 'for' keyword");

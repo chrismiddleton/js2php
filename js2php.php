@@ -1193,7 +1193,8 @@ class RegexExpression extends Expression {
 	}
 	public function toPhp ($indents) {
 		// TODO: needs to be a string, for one
-		return (string) $this->token;
+		$string = (string) $this->token;
+		return var_export($string, true);
 	}
 }
 

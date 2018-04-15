@@ -172,7 +172,7 @@ class JsIdentifierToken extends SymbolToken {
 		parent::__construct($parser, $name);
 		$this->name = $name;
 	}
-	public static function parse ($parser, $symbols) {
+	public static function parse ($parser, $symbols = null) {
 		$c = $parser->peek();
 		if ($c !== "_" && $c !== "$" && !ctype_alpha($c)) {
 			return;
@@ -186,6 +186,9 @@ class JsIdentifierToken extends SymbolToken {
 			}
 			$name .= $c;
 			$parser->advance();
+		}
+		if (isset($symbols)) {
+			// TODO
 		}
 		return new self($parser, $name);
 	}

@@ -225,7 +225,7 @@ class SpaceToken extends Token {
 		return strlen($text) ? new self($parser, $text) : null;
 	}
 	public function __toString () {
-		return $this->text;
+		return $this->space;
 	}
 }
 

@@ -2738,13 +2738,17 @@ class Program {
 
 function jsToPhp ($js, $options) {
 	$tokens = JsTokenizer::tokenize($js, $options);
+	if (!empty($options['dumpTokensAndExit'])) {
+		var_dump($tokens);
+		exit();
+	}
 	$program = Program::fromJs(new ArrayIterator($tokens));
 	return $program->toPhp();
 }
 
-function jsFileToPhp ($file, $options) {
+function jsFileToPhp ($file, $options = null) {
 	$js = file_get_contents($file);
 	return jsToPhp($js, $options);
 }
 
-echo jsFileToPhp($argv[1], array('dumpTokens' => true));
+echo jsFileToPhp($argv[1]);

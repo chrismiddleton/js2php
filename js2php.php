@@ -1,5 +1,7 @@
 <?php
 
+error_reporting(E_ALL);
+
 function debug ($msg) {
 	$backtrace = debug_backtrace();
 // 	echo str_repeat(" ", count($backtrace)) . $msg . "\n";
@@ -2471,7 +2473,6 @@ class FunctionDeclaration {
 		if (!Symbol::fromJs($tokens, "}")) {
 			throw new TokenException($tokens, "Expected closing '}' after function body");
 		}
-		echo "Read function declaration {$name->name}\n"; // fdo
 		return new self($name, $params, $body);
 	}
 	public function toPhp ($indents = "") {

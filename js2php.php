@@ -2083,6 +2083,7 @@ class Block {
 			$statements[] = $statement;
 			if (!$brace) break;
 		}
+		if (!count($statements) && !$brace) return null;
 		if ($brace) {
 			if (!Symbol::fromJs($tokens, "}")) throw new TokenException($tokens, "Expected closing '}' after block");
 		}

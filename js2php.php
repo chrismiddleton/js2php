@@ -269,7 +269,7 @@ class HexadecimalNumberToken extends Token {
 			$number .= $c;
 			$parser->advance();
 		}
-		if (!strlen($number)) throw new Exception("Expected hexadecimal number after '0x'");
+		if (!strlen($number)) throw new StringParserException($parser, "Expected hexadecimal number after '0x'");
 		return new self($parser, $number);
 	}
 	public function __toString () {
@@ -289,7 +289,7 @@ class DoubleQuotedStringToken extends Token {
 			if ($parser->readString('"')) break;
 			if ($parser->readString("\\")) {
 				$nextChar = $parser->read();
-				if (!strlen($nextChar)) throw new Exception("Expected character after '\\'");
+				if (!strlen($nextChar)) throw new StringParserException($parser, "Expected character after '\\'");
 				// (we don't interpret it here)
 				$text .= "\\" . $nextChar;
 			} else {
@@ -316,7 +316,7 @@ class SingleQuotedStringToken extends Token {
 			if ($parser->readString("'")) break;
 			if ($parser->readString("\\")) {
 				$nextChar = $parser->read();
-				if (!strlen($nextChar)) throw new Exception("Expected character after '\\'");
+				if (!strlen($nextChar)) throw new StringParserException($parser, "Expected character after '\\'");
 				// (we don't interpret it here)
 				$text .= "\\" . $nextChar;
 			} else {
@@ -461,11 +461,11 @@ class RegexCaptureGroup {
 		if (!$parser->readString("(")) return null;
 		$element = RegexAlternation::parse($parser);
 		if (!$element) {
-			throw new Exception("Expected regex element inside of capture group");
+			throw new StringParserException($parser, "Expected regex element inside of capture group");
 		}
 		if (!$parser->readString(")")) {
 			echo substr($parser->str, $parser->i, 20); // fdo
-			throw new Exception("Unterminated regex capture group");
+			throw new StringParserException($parser, "Unterminated regex capture group");
 		}
 		return new self($element);
 	}
@@ -712,7 +712,7 @@ class JsTokenizer {
 				$tokens[] = $token;
 				continue;
 			}
-			throw new Exception("Unexpected token " . substr($parser->str, $parser->i));
+			throw new StringParserException($parser, "Unexpected token " . substr($parser->str, $parser->i));
 		}
 		return $tokens;
 	}
@@ -890,6 +890,13 @@ class TokenException extends Exception {
 		} else {
 			$message .= ", got end of file instead";
 		}
+		$this->message = $message;
+	}
+}
+
+class StringParserException extends Exception {
+	public function __construct (StringParser $parser, $message) {
+		$message .= " on line " . $parser->getLineNum() . ", col " . $parser->getColNum();
 		$this->message = $message;
 	}
 }

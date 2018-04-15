@@ -877,7 +877,7 @@ class VarDefinitionPiece {
 		$this->val = $val;
 	}
 	public function toPhp ($indents) {
-		return $this->name->toPhp($indents) . ($this->val ? (" = " . $this->val->toPhp($indents)) : "");
+		return $this->name->toPhp($indents) . " = " . ($this->val ? $this->val->toPhp($indents) : "null");
 	}
 }
 

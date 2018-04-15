@@ -2281,6 +2281,107 @@ class ForLoop {
 	}
 }
 
+class DefaultSwitchCase {
+	public function __construct ($blocks) {
+		$this->blocks = $blocks;
+	}
+	public static function fromJs ($tokens) {
+		debug("looking for default switch case");
+		if (!Keyword::fromJs($tokens, "default")) return null;
+		debug("found start of default switch case");
+		if (!Symbol::fromJs($tokens, ":")) {
+			throw new Exception("Expected ':' after switch case value");
+		}
+		$blocks = array();
+		while ($tokens->valid()) {
+			$block = Block::fromJs($tokens);
+			if (!$block) break;
+			$blocks[] = $block;
+		}
+		return new self($blocks);
+	}
+	public function toPhp ($indents) {
+		$code = "default:\n";
+		foreach ($this->blocks as $block) {
+			$code .= "$indents\t" . $block->toPhp($indents . "\t");
+		}
+		return $code;
+	}
+}
+
+class SwitchCase {
+	public function __construct ($value, $blocks) {
+		$this->value = $value;
+		$this->blocks = $blocks;
+	}
+	public static function fromJs ($tokens) {
+		debug("looking for switch case");
+		if (!Keyword::fromJs($tokens, "case")) return null;
+		debug("found start of switch case");
+		if (!($value = Expression::fromJs($tokens))) {
+			throw new Exception("Expected expression after 'case' keyword");
+		}
+		if (!Symbol::fromJs($tokens, ":")) {
+			throw new Exception("Expected ':' after switch case value");
+		}
+		$blocks = array();
+		while ($tokens->valid()) {
+			$block = Block::fromJs($tokens);
+			if (!$block) break;
+			$blocks[] = $block;
+		}
+		return new self($value, $blocks);
+	}
+	public function toPhp ($indents) {
+		$code = "case " . $this->value->toPhp($indents) . ":\n";
+		foreach ($this->blocks as $block) {
+			$code .= "$indents\t" . $block->toPhp($indents . "\t");
+		}
+		return $code;
+	}
+}
+
+class SwitchStatement {
+	public function __construct ($test, $cases) {
+		$this->test = $test;
+		$this->cases = $cases;
+	}
+	public static function fromJs ($tokens) {
+		debug("looking for switch statement");
+		if (!Keyword::fromJs($tokens, "switch")) return null;
+		debug("found start of switch statement");
+		if (!Symbol::fromJs($tokens, "(")) return null;
+		if (!($test = Expression::fromJs($tokens))) {
+			throw new TokenException($tokens, "Expected switch test after '('");
+		}
+		if (!Symbol::fromJs($tokens, ")")) {
+			throw new TokenException($tokens, "Expected ')' after switch test");
+		}
+		if (!Symbol::fromJs($tokens, "{")) {
+			throw new TokenException($tokens, "Expected '{' to start switch body");
+		}
+		$cases = array();
+		while ($tokens->valid()) {
+			$switchCase = SwitchCase::fromJs($tokens) or
+				$switchCase = DefaultSwitchCase::fromJs($tokens);
+			if (!$switchCase) break;
+			$cases[] = $switchCase;
+		}
+		if (!Symbol::fromJs($tokens, "}")) {
+			throw new TokenException($tokens, "Expected '}' after switch body");
+		}
+		return new self($test, $cases);
+	}
+	public function toPhp ($indents) {
+		$code = "switch (" . $this->test->toPhp($indents) . ") {\n";
+		foreach ($this->cases as $switchCase) {
+			$code .= "$indents\t" . $switchCase->toPhp($indents . "\t") . "\n";
+		}
+		$code .= "$indents}\n";
+		return $code;
+	}
+}
+
 class EmptyStatement {
 	private static $instance = null;
 	public static function fromJs ($tokens) {
@@ -2406,6 +2507,18 @@ class ForOfLoop {
 	// TODO
 }
 
+class BreakStatement {
+	// TODO: handle labeled break statements
+	public function __construct () {}
+	public static function fromJs ($tokens) {
+		if (!Keyword::fromJs($tokens, "break")) return null;
+		return new self();
+	}
+	public function toPhp ($indents) {
+		return "break;";
+	}
+}
+
 abstract class Statement {
 	public static function fromJs ($tokens) {
 		$statement = EmptyStatement::fromJs($tokens) or
@@ -2420,8 +2533,17 @@ abstract class Statement {
 			// that is something else, but not vice versa
 			$statement = ForInLoop::fromJs($tokens) or
 			$statement = ForLoop::fromJs($tokens) or
+			$statement = SwitchStatement::fromJs($tokens) or
+			$statement = BreakStatement::fromJs($tokens) or
+			$statement = SwitchCase::fromJs($tokens) or
+			$statement = DefaultSwitchCase::fromJs($tokens) or
 			$statement = FunctionDeclaration::fromJs($tokens) or
 			$statement = ExpressionStatement::fromJs($tokens);
+		// We parse these here so that we don't misinterpret them as identifier expression statements,
+		// but they are not really statements so we return null.
+		if ($statement instanceof SwitchCase || $statement instanceof DefaultSwitchCase) {
+			return null;
+		}
 		return $statement;
 	}
 }

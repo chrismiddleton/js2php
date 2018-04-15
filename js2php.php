@@ -453,12 +453,21 @@ class RegexCharacterClass {
 
 }
 
-class RegexCaptureGroup {
-	public function __construct ($element) {
+class RegexGroup {
+	public function __construct ($modifier, $element) {
+		$this->modifier = $modifier;
 		$this->element = $element;
 	}
 	public static function parse ($parser) {
 		if (!$parser->readString("(")) return null;
+		$modifiers = array("?:", "?=", "?!");
+		$ourModifier = null;
+		foreach ($modifiers as $modifier) {
+			if ($parser->readString($modifier)) {
+				$ourModifier = $modifier;
+				break;
+			}
+		}
 		$element = RegexAlternation::parse($parser);
 		if (!$element) {
 			throw new StringParserException($parser, "Expected regex element inside of capture group");
@@ -467,10 +476,10 @@ class RegexCaptureGroup {
 			echo substr($parser->str, $parser->i, 20); // fdo
 			throw new StringParserException($parser, "Unterminated regex capture group");
 		}
-		return new self($element);
+		return new self($ourModifier, $element);
 	}
 	public function __toString () {
-		return "(" . $this->element . ")";
+		return "(" . ($this->modifier ? $this->modifier : "") . $this->element . ")";
 	}
 }
 
@@ -486,7 +495,7 @@ class RegexQuantifiedElement {
 		// TODO: handle groups as well
 		if (
 			$element = RegexCharacterClass::parse($parser) or
-			$element = RegexCaptureGroup::parse($parser) or
+			$element = RegexGroup::parse($parser) or
 			$element = RegexSimpleElement::parse($parser)
 		) {
 			$simpleQuantifiers = array("*?", "*", "+?", "+", "?");

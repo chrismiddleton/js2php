@@ -2420,7 +2420,6 @@ class FunctionDeclaration {
 			throw new TokenException($tokens, "Expected opening '{' after function parameters");
 		}
 		$body = FunctionBody::fromJs($tokens);
-		$token = $tokens->current();
 		if (!Symbol::fromJs($tokens, "}")) {
 			throw new TokenException($tokens, "Expected closing '}' after function body");
 		}
@@ -2481,7 +2480,6 @@ class FunctionExpression extends Expression {
 			throw new TokenException($tokens, "Expected opening '{' after function parameters");
 		}
 		$body = FunctionBody::fromJs($tokens);
-		$token = $tokens->current();
 		if (!Symbol::fromJs($tokens, "}")) {
 			throw new TokenException($tokens, "Expected closing '}' after function body");
 		}

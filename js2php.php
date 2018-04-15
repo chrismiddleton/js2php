@@ -2298,7 +2298,7 @@ class DefaultSwitchCase {
 		if (!Keyword::fromJs($tokens, "default")) return null;
 		debug("found start of default switch case");
 		if (!Symbol::fromJs($tokens, ":")) {
-			throw new Exception("Expected ':' after switch case value");
+			throw new TokenException($tokens, "Expected ':' after switch case value");
 		}
 		$blocks = array();
 		while ($tokens->valid()) {
@@ -2327,10 +2327,10 @@ class SwitchCase {
 		if (!Keyword::fromJs($tokens, "case")) return null;
 		debug("found start of switch case");
 		if (!($value = Expression::fromJs($tokens))) {
-			throw new Exception("Expected expression after 'case' keyword");
+			throw new TokenException($tokens, "Expected expression after 'case' keyword");
 		}
 		if (!Symbol::fromJs($tokens, ":")) {
-			throw new Exception("Expected ':' after switch case value");
+			throw new TokenException($tokens, "Expected ':' after switch case value");
 		}
 		$blocks = array();
 		while ($tokens->valid()) {

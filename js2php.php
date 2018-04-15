@@ -628,7 +628,7 @@ class RegexToken extends Token {
 
 class JsTokenizer {
 	public function __construct () {}
-	public static function tokenize ($js) {
+	public static function tokenize ($js, $options) {
 		$tokens = array();
 		$parser = new StringParser($js);
 		$symbols = array(
@@ -687,6 +687,7 @@ class JsTokenizer {
 				$lastRealToken = $token;
 			}
 			if ($token) {
+				if (!empty($options['dumpTokens'])) var_dump($token);
 				$tokens[] = $token;
 				continue;
 			}
@@ -2591,15 +2592,15 @@ class Program {
 	}
 }
 
-function jsToPhp ($js) {
-	$tokens = JsTokenizer::tokenize($js);
+function jsToPhp ($js, $options) {
+	$tokens = JsTokenizer::tokenize($js, $options);
 	$program = Program::fromJs(new ArrayIterator($tokens));
 	return $program->toPhp();
 }
 
-function jsFileToPhp ($file) {
+function jsFileToPhp ($file, $options) {
 	$js = file_get_contents($file);
-	return jsToPhp($js);
+	return jsToPhp($js, $options);
 }
 
-echo jsFileToPhp("foo.js");
+echo jsFileToPhp($argv[1], array('dumpTokens' => true));

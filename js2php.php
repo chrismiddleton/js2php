@@ -1129,9 +1129,10 @@ class ObjectExpression extends Expression {
 		$pairs = array();
 		// TODO: support newer forms of objects
 		while ($tokens->valid()) {
-			if (!($key = PropertyIdentifier::fromJs($tokens))) {
-				break;
-			}
+			$key = PropertyIdentifier::fromJs($tokens) or
+				$key = SingleQuotedStringExpression::fromJs($tokens) or
+				$key = DoubleQuotedStringExpression::fromJs($tokens);
+			if (!$key) break;
 			// if we don't find a ':', assume we misparsed a block as an object
 			if (!Symbol::fromJs($tokens, ":")) {
 				$tokens->seek($start);
@@ -1152,7 +1153,14 @@ class ObjectExpression extends Expression {
 	public function toPhp ($indents) {
 		$kvStrs = array();
 		foreach ($this->pairs as $pair) {
-			$kvStrs[] = var_export($pair->key, true) . " => " . $pair->val->toPhp($indents);
+			$kvStrs[] = 
+				(
+					$pair->key instanceof PropertyIdentifier ?
+					var_export($pair->key, true) :
+					$pair->key->toPhp($indents)
+				) .
+				" => " . 
+				$pair->val->toPhp($indents);
 		}
 		return "array(" . implode(", ", $kvStrs) . ")";
 	}

@@ -1863,7 +1863,7 @@ class AssignmentExpression extends Expression {
 		$left = TernaryExpression::fromJs($tokens);
 		if (!$left) return;
 		$afterLeft = $tokens->key();
-		$symbols = array("=", "+=", "-", "*=", "/=", "%=", "<<=", ">>=", ">>>=", "~=", "^=", "&=", "|=");
+		$symbols = array("=", "+=", "-=", "*=", "/=", "%=", "<<=", ">>=", ">>>=", "~=", "^=", "&=", "|=");
 		foreach ($symbols as $symbol) {
 			$symbolFound = Symbol::fromJs($tokens, $symbol);
 			if ($symbolFound) break;

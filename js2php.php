@@ -444,8 +444,6 @@ class RegexCharacterClass {
 				return null;
 			}
 			return new self($negated, $elements);
-		} else if ($element = RegexSimpleElement::parse($parser)) {
-			return $element;
 		}
 	
 	}
@@ -469,6 +467,7 @@ class RegexCaptureGroup {
 			echo substr($parser->str, $parser->i, 20); // fdo
 			throw new Exception("Unterminated regex capture group");
 		}
+		return new self($element);
 	}
 	public function __toString () {
 		return "(" . $this->element . ")";
@@ -487,7 +486,8 @@ class RegexQuantifiedElement {
 		// TODO: handle groups as well
 		if (
 			$element = RegexCharacterClass::parse($parser) or
-			$element = RegexCaptureGroup::parse($parser)
+			$element = RegexCaptureGroup::parse($parser) or
+			$element = RegexSimpleElement::parse($parser)
 		) {
 			$simpleQuantifiers = array("*?", "*", "+?", "+", "?");
 			foreach ($simpleQuantifiers as $quantifier) {

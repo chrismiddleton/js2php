@@ -2479,7 +2479,7 @@ class FunctionDeclaration {
 		return new self($name, $params, $body);
 	}
 	public function toPhp ($indents = "") {
-		$code = $indents . "function {$this->name->name} (";
+		$code = "function {$this->name->name} (";
 		$paramStrs = array();
 		foreach ($this->params as $param) {
 			$paramStrs []= $param->toPhp($indents);
@@ -2542,7 +2542,7 @@ class FunctionExpression extends Expression {
 		return new self($name, $params, $body);
 	}
 	public function toPhp ($indents = "") {
-		$code = $indents . "function " . ($this->name ? "{$this->name->name} " : "") . "(";
+		$code = "function " . ($this->name ? "{$this->name->name} " : "") . "(";
 		$paramStrs = array();
 		foreach ($this->params as $param) {
 			$paramStrs []= $param->toPhp($indents);
@@ -2550,7 +2550,7 @@ class FunctionExpression extends Expression {
 		$code .= implode(", ", $paramStrs);
 		$code .= ") {\n";
 		$code .= $this->body->toPhp($indents . "\t");
-		$code .= $indents . "}\n";
+		$code .= $indents . "}";
 		return $code;
 	}
 }

@@ -13,7 +13,7 @@ class TryStatement {
 		$this->catchParameter = $catchParameter;
 		$this->finallyBlock = $finallyBlock;
 	}
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		if (!Keyword::fromJs($tokens, "try")) return null;
 		// TODO: require braces?
 		$tryBlock = Block::fromJs($tokens);

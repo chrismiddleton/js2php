@@ -7,7 +7,7 @@ class FunctionBody {
 	public function __construct ($statements) {
 		$this->statements = $statements;
 	}
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		debug("parsing function body");
 		$statements = array();
 		while ($tokens->valid()) {

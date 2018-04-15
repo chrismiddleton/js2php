@@ -8,7 +8,7 @@ class ExpressionStatement {
 	public function __construct ($expression) {
 		$this->expression = $expression;
 	}
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		debug("looking for expression statement");
 		if (!($expression = Expression::fromJs($tokens))) return;
 		debug("found expression statement");

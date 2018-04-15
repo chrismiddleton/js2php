@@ -12,7 +12,7 @@ require_once __DIR__ . "/Symbol.php";
 require_once __DIR__ . "/TokenException.php";
 
 abstract class FunctionCallLevelExpression extends Expression {
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		debug("looking for function call level expression");
 		$expression = ParenthesizedExpression::fromJs($tokens);
 		if (!$expression) return;

@@ -9,7 +9,7 @@ class ReturnStatement {
 	public function __construct ($value) {
 		$this->value = $value;
 	}
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		if (!Keyword::fromJs($tokens, "return")) return;
 		debug("found return statement");
 		// can be null, that's OK

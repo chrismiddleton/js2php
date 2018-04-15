@@ -8,7 +8,7 @@ class ArglessNewExpression {
 	public function __construct ($expression) {
 		$this->expression = $expression;
 	}
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		if (!Symbol::fromJs($tokens, "new")) {
 			return FunctionCallLevelExpression::fromJs($tokens);
 		}

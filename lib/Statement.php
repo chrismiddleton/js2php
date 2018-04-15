@@ -18,7 +18,7 @@ require_once __DIR__ . "/VarDefinitionStatement.php";
 require_once __DIR__ . "/WhileLoop.php";
 
 abstract class Statement {
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		$statement = EmptyStatement::fromJs($tokens) or
 			$statement = VarDefinitionStatement::fromJs($tokens) or
 			$statement = IfStatement::fromJs($tokens) or

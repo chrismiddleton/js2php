@@ -9,7 +9,7 @@ class ArrayExpression extends Expression {
 	public function __construct ($elements) {
 		$this->elements = $elements;
 	}
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		debug("looking for array expression");
 		if (!Symbol::fromJs($tokens, "[")) {
 			return;

@@ -10,7 +10,7 @@ class Block {
 		$this->statements = $statements;
 		$this->brace = $brace;
 	}
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		debug("looking for block start");
 		$brace = false;
 		if (Symbol::fromJs($tokens, "{")) {

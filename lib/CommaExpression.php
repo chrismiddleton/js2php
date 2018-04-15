@@ -9,7 +9,7 @@ class CommaExpression extends Expression {
 	public function __construct ($expressions) {
 		$this->expressions = $expressions;
 	}
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		debug("looking for comma expression");
 		$expressions = array();
 		while ($tokens->valid()) {

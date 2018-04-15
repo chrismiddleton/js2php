@@ -14,7 +14,7 @@ class ObjectExpression extends Expression {
 	public function __construct ($pairs) {
 		$this->pairs = $pairs;
 	}
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		debug("looking for object expression");
 		if (!$tokens->valid()) return null;
 		$start = $tokens->key();

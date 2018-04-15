@@ -6,7 +6,7 @@ require_once __DIR__ . "/PostfixIncrementExpression.php";
 require_once __DIR__ . "/Symbol.php";
 
 abstract class PostfixIncrementLevelExpression {
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		$expression = ArglessNewExpression::fromJs($tokens);
 		if (Symbol::fromJs($tokens, "++")) {
 			return new PostfixIncrementExpression($expression);

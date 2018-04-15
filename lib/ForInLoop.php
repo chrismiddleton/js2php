@@ -14,7 +14,7 @@ class ForInLoop {
 		$this->object = $object;
 		$this->body = $body;
 	}
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		debug("looking for for...in loop");
 		if (!$tokens->valid()) return null;
 		$start = $tokens->key();

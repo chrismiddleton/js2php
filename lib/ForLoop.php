@@ -21,7 +21,7 @@ class ForLoop {
 		// block
 		$this->body = $body;
 	}
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		debug("looking for 'for' loop");
 		if (!Keyword::fromJs($tokens, "for")) return null;
 		debug("found 'for' loop");

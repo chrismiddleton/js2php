@@ -9,7 +9,7 @@ class ThrowStatement {
 	public function __construct ($value) {
 		$this->value = $value;
 	}
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		if (!Keyword::fromJs($tokens, "throw")) return null;
 		debug("found throw statement");
 		// can be null, that's OK

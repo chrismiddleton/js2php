@@ -11,7 +11,7 @@ class BitwiseShiftExpression extends Expression {
 		$this->symbol = $symbol;
 		$this->b = $b;
 	}
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		return parseLeftAssociativeBinaryExpression(
 			$tokens,
 			__CLASS__,

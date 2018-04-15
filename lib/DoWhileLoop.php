@@ -13,7 +13,7 @@ class DoWhileLoop {
 		$this->block = $block;
 		$this->test = $test;
 	}
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		debug("looking for do-while loop");
 		if (!Keyword::fromJs($tokens, "do")) return null;
 		debug("found do-while loop start");

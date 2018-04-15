@@ -11,7 +11,7 @@ class TernaryExpression extends Expression {
 		$this->yes = $yes;
 		$this->no = $no;
 	}
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		debug("looking for ternary expression");
 		$test = LogicalOrExpression::fromJs($tokens);
 		if (!$test) return;

@@ -8,7 +8,7 @@ class Comments {
 	public function __construct ($comments) {
 		$this->comments = $comments;
 	}
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		$comments = array();
 		while ($tokens->valid()) {
 			if (

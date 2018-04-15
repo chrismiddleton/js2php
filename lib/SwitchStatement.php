@@ -13,7 +13,7 @@ class SwitchStatement {
 		$this->test = $test;
 		$this->cases = $cases;
 	}
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		debug("looking for switch statement");
 		if (!Keyword::fromJs($tokens, "switch")) return null;
 		debug("found start of switch statement");

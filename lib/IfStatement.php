@@ -13,7 +13,7 @@ class IfStatement {
 		$this->ifBlock = $ifBlock;
 		$this->elseBlock = $elseBlock;
 	}
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		if (!Keyword::fromJs($tokens, "if")) return null;
 		debug("found if statement");
 		if (!Symbol::fromJs($tokens, "(")) {

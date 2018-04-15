@@ -12,7 +12,7 @@ class AssignmentExpression extends Expression {
 		$this->symbol = $symbol;
 		$this->right = $right;
 	}
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		debug("looking for assignment expression");
 		// TODO: verify that it's a valid LHS?
 		$left = TernaryExpression::fromJs($tokens);

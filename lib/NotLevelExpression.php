@@ -16,7 +16,7 @@ require_once __DIR__ . "/TypeofExpression.php";
 require_once __DIR__ . "/VoidExpression.php";
 
 abstract class NotLevelExpression {
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		debug("looking for not level expression");
 		if (Symbol::fromJs($tokens, "!")) {
 			$expression = self::fromJs($tokens);

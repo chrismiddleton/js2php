@@ -11,7 +11,7 @@ class SwitchCase {
 		$this->value = $value;
 		$this->blocks = $blocks;
 	}
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		debug("looking for switch case");
 		if (!Keyword::fromJs($tokens, "case")) return null;
 		debug("found start of switch case");

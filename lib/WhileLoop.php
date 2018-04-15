@@ -13,7 +13,7 @@ class WhileLoop {
 		$this->test = $test;
 		$this->block = $block;
 	}
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		debug("looking for while loop");
 		if (!Keyword::fromJs($tokens, "while")) return null;
 		debug("found while loop start");

@@ -10,7 +10,7 @@ class SingleVarDeclaration {
 		$this->declarator = $declarator;
 		$this->identifier = $identifier;
 	}
-	public static function fromJs ($tokens) {
+	public static function fromJs (ArrayIterator $tokens) {
 		debug("looking for single var declaration");
 		$declarator = null;
 		if (Keyword::fromJs($tokens, "var")) {

@@ -604,7 +604,7 @@ class JsTokenizer {
 			"/=", "/",
 			"%=", "%",
 			"<<=", "<<", "<=", "<",
-			">>=", ">>", ">", ">=",
+			">>>=", ">>>", ">>=", ">>", ">", ">=",
 			"~=", "~",
 			"^=", "^",
 			"&=", "&&", "&",
@@ -812,10 +812,8 @@ class ParenthesizedExpression extends Expression {
 		$this->expression = $expression;
 	}
 	public static function fromJs (ArrayIterator $tokens) {
-		$start = $tokens->key();
 		if (!Symbol::fromJs($tokens, "(")) {
-			$tokens->seek($start);
-			return null;
+			return SimpleExpression::fromJs($tokens);
 		}
 		debug("found parenthesized expression start");
 		$expression = Expression::fromJs($tokens);
@@ -830,9 +828,8 @@ class ParenthesizedExpression extends Expression {
 }
 
 abstract class Expression {
-	public function __construct () {}
 	public static function fromJs (ArrayIterator $tokens) {
-		return AssignmentExpression::fromJs($tokens);
+		return CommaExpression::fromJs($tokens);
 	}
 }
 
@@ -1091,7 +1088,7 @@ class ArrayExpression extends Expression {
 			return;
 		}
 		while ($tokens->valid()) {
-			if (!($element = Expression::fromJs($tokens))) break;
+			if (!($element = AssignmentExpression::fromJs($tokens))) break;
 			$elements[] = $element;
 			if (!Symbol::fromJs($tokens, ",")) break;
 		}
@@ -1140,7 +1137,7 @@ class ObjectExpression extends Expression {
 				$tokens->seek($start);
 				return null;
 			}
-			if (!($val = Expression::fromJs($tokens))) {
+			if (!($val = AssignmentExpression::fromJs($tokens))) {
 				throw new TokenException($tokens, "Expected value after ':' in object");
 			}
 			$pairs[] = new ObjectPair($key, $val);
@@ -1163,6 +1160,7 @@ class ObjectExpression extends Expression {
 
 abstract class SimpleExpression extends Expression {
 	public static function fromJs (ArrayIterator $tokens) {
+		debug("looking for simple expression");
 		$expression = ArrayExpression::fromJs($tokens) or
 			$expression = ObjectExpression::fromJs($tokens) or
 			$expression = BooleanExpression::fromJs($tokens) or
@@ -1176,6 +1174,7 @@ abstract class SimpleExpression extends Expression {
 			$expression = SingleQuotedStringExpression::fromJs($tokens) or
 			$expression = RegexExpression::fromJs($tokens)
 		;
+		if ($expression) debug("found simple expression");
 		return $expression;
 	}
 }
@@ -1183,15 +1182,6 @@ abstract class SimpleExpression extends Expression {
 class NotExpression extends Expression {
 	public function __construct ($expression) {
 		$this->expression = $expression;
-	}
-	public static function fromJs (ArrayIterator $tokens) {
-		if (!Symbol::fromJs($tokens, "!")) {
-			return SimpleExpression::fromJs($tokens);
-		}
-		debug("found '!' expression");
-		$expression = self::fromJs($tokens);
-		if (!$expression) throw new TokenException($tokens, "Expected expression after '!'");
-		return new self($expression);
 	}
 	public function toPhp ($indents) {
 		return "!" . $this->expression->toPhp($indents);
@@ -1246,8 +1236,7 @@ class FunctionIdentifier extends Identifier {
 abstract class FunctionCallLevelExpression extends Expression {
 	public static function fromJs ($tokens) {
 		debug("looking for function call level expression");
-		$expression = ParenthesizedExpression::fromJs($tokens) or
-			$expression = NotExpression::fromJs($tokens);
+		$expression = ParenthesizedExpression::fromJs($tokens);
 		if (!$expression) return;
 		while ($tokens->valid()) {
 			if (Symbol::fromJs($tokens, "(")) {
@@ -1256,7 +1245,7 @@ abstract class FunctionCallLevelExpression extends Expression {
 				$args = array();
 				while ($tokens->valid()) {
 					$token = $tokens->current();
-					$arg = Expression::fromJs($tokens);
+					$arg = AssignmentExpression::fromJs($tokens);
 					if (!$arg) break;
 					$args[] = $arg;
 					if (!Symbol::fromJs($tokens, ",")) break;
@@ -1279,9 +1268,11 @@ abstract class FunctionCallLevelExpression extends Expression {
 				}
 				$expression = new BracketPropertyAccessExpression($expression, $property);
 			} else {
-				return $expression;
+				// TODO: confused about new (with argument list) precedence being separate from new without arg list
+				break;
 			}
 		}
+		return $expression;
 	}
 }
 
@@ -1331,25 +1322,124 @@ class FunctionCallExpression extends Expression {
 	}
 }
 
-class TypeofExpression {
+class ArglessNewExpression {
 	public function __construct ($expression) {
 		$this->expression = $expression;
 	}
 	public static function fromJs ($tokens) {
-		$start = $tokens->key();
-		$identifier = Identifier::fromJs($tokens);
-		if (!$identifier || $identifier->name !== 'typeof') {
-			$tokens->seek($start);
+		if (!Symbol::fromJs($tokens, "new")) {
 			return FunctionCallLevelExpression::fromJs($tokens);
 		}
-		debug("found typeof expression");
-		$expression = TypeofExpression::fromJs($tokens);
-		if (!$expression) throw new TokenException($tokens, "Expected expression after 'typeof'");
+		$expression = self::fromJs($tokens);
+		if (!$expression) throw new TokenException("Expected expression after 'new'");
 		return new self($expression);
+	}
+	public function toPhp ($indents) {
+		// TODO
+		return "new " . $this->expression;
+	}
+}
+
+abstract class PostfixIncrementLevelExpression {
+	public static function fromJs ($tokens) {
+		$expression = ArglessNewExpression::fromJs($tokens);
+		if (Symbol::fromJs($tokens, "++")) {
+			return new PostfixIncrementExpression($expression);
+		} else if (Symbol::fromJs($tokens, "--")) {
+			return new PostfixDecrementExpression($expression);
+		} else {
+			return $expression;
+		}
+	}
+}
+
+class TypeofExpression {
+	public function __construct ($expression) {
+		$this->expression = $expression;
 	}
 	public function toPhp ($indents) {
 		// TODO: handle the different cases here
 		return "gettype(" . $this->expression->toPhp($indents) . ")";
+	}
+}
+
+abstract class NotLevelExpression {
+	public static function fromJs ($tokens) {
+		debug("looking for not level expression");
+		if (Symbol::fromJs($tokens, "!")) {
+			$expression = self::fromJs($tokens);
+			if (!$expression) {
+				throw new TokenException($tokens, "Expected expression after '!'");
+			}
+			debug("found not expression");
+			return new NotExpression($expression);
+		} else if (Symbol::fromJs($tokens, "~")) {
+			$expression = self::fromJs($tokens);
+			if (!$expression) {
+				throw new TokenException($tokens, "Expected expression after '~'");
+			}
+			debug("found bitwise not expression");
+			return new BitwiseNotExpression($expression);
+		} else if (Symbol::fromJs($tokens, "+")) {
+			$expression = self::fromJs($tokens);
+			if (!$expression) {
+				throw new TokenException($tokens, "Expected expression after '+'");
+			}
+			debug("found unary plus expression");
+			return new PlusExpression($expression);
+		} else if (Symbol::fromJs($tokens, "-")) {
+			$expression = self::fromJs($tokens);
+			if (!$expression) {
+				throw new TokenException($tokens, "Expected expression after '-'");
+			}
+			debug("found unary minus expression");
+			return new MinusExpression($expression);
+		} else if (Symbol::fromJs($tokens, "++")) {
+			$expression = self::fromJs($tokens);
+			if (!$expression) {
+				throw new TokenException($tokens, "Expected expression after '++'");
+			}
+			debug("found prefix increment expression");
+			return new PrefixIncrementExpression($expression);
+		} else if (Symbol::fromJs($tokens, "--")) {
+			$expression = self::fromJs($tokens);
+			if (!$expression) {
+				throw new TokenException($tokens, "Expected expression after '--'");
+			}
+			debug("found prefix decrement expression");
+			return new PrefixDecrementExpression($expression);
+		} else if (Symbol::fromJs($tokens, "typeof")) {
+			$expression = self::fromJs($tokens);
+			if (!$expression) {
+				throw new TokenException($tokens, "Expected expression after 'typeof'");
+			}
+			debug("found typeof expression");
+			return new TypeofExpression($expression);
+		} else if (Symbol::fromJs($tokens, "void")) {
+			$expression = self::fromJs($tokens);
+			if (!$expression) {
+				throw new TokenException($tokens, "Expected expression after 'void'");
+			}
+			debug("found void expression");
+			return new VoidExpression($expression);
+		} else if (Symbol::fromJs($tokens, "delete")) {
+			$expression = self::fromJs($tokens);
+			if (!$expression) {
+				throw new TokenException($tokens, "Expected expression after 'delete'");
+			}
+			debug("found delete expression");
+			return new DeleteExpression($expression);
+		} else if (Symbol::fromJs($tokens, "await")) {
+			$expression = self::fromJs($tokens);
+			if (!$expression) {
+				throw new TokenException($tokens, "Expected expression after 'await'");
+			}
+			debug("found await expression");
+			return new AwaitExpression($expression);
+		} else {
+			$expression = PostfixIncrementLevelExpression::fromJs($tokens);
+			return $expression;
+		}
 	}
 }
 
@@ -1388,7 +1478,7 @@ class MultiplicativeExpression extends Expression {
 			array('*', '/', '%'),
 			array('Symbol', 'fromJs'),
 			// TODO: this should be ** (exponentiation)
-			array('TypeofExpression', 'fromJs')
+			array('NotLevelExpression', 'fromJs')
 		);
 	}
 	public function toPhp ($indents) {
@@ -1583,11 +1673,10 @@ class TernaryExpression extends Expression {
 		$this->no = $no;
 	}
 	public static function fromJs ($tokens) {
+		debug("looking for ternary expression");
 		$test = LogicalOrExpression::fromJs($tokens);
 		if (!$test) return;
-		$afterTest = $tokens->key();
 		if (!Symbol::fromJs($tokens, "?")) {
-			$tokens->seek($afterTest);
 			return $test;
 		}
 		debug("found ternary expression");
@@ -1615,11 +1704,12 @@ class AssignmentExpression extends Expression {
 		$this->right = $right;
 	}
 	public static function fromJs ($tokens) {
+		debug("looking for assignment expression");
 		// TODO: verify that it's a valid LHS?
 		$left = TernaryExpression::fromJs($tokens);
 		if (!$left) return;
 		$afterLeft = $tokens->key();
-		$symbols = array("=", "+=", "-", "*=", "/=", "%=", "<<=", ">>=", "~=", "^=", "&=", "|=");
+		$symbols = array("=", "+=", "-", "*=", "/=", "%=", "<<=", ">>=", ">>>=", "~=", "^=", "&=", "|=");
 		foreach ($symbols as $symbol) {
 			$symbolFound = Symbol::fromJs($tokens, $symbol);
 			if ($symbolFound) break;
@@ -1635,6 +1725,54 @@ class AssignmentExpression extends Expression {
 	}
 	public function toPhp ($indents) {
 		return $left->toPhp($indents) . " {$this->symbol->symbol} " . $right->toPhp($indents);
+	}
+}
+
+class YieldExpression extends Expression {
+	public function __construct ($expression) {
+		$this->expression = $expression;
+	}
+	public static function fromJs ($tokens) {
+		debug("looking for yield expression");
+		if (!Symbol::fromJs($tokens, "yield")) return AssignmentExpression::fromJs($tokens);
+		$expression = YieldExpression::fromJs($tokens);
+		if (!$expression) throw new TokenException($tokens, "Expected expression after 'yield'");
+		debug("found yield expression");
+		return new self($expression);
+	}
+	public function toPhp ($indents) {
+		return "yield " . $this->expression->toPhp($indents);
+	}
+}
+
+class CommaExpression extends Expression {
+	public function __construct ($expressions) {
+		$this->expressions = $expressions;
+	}
+	public static function fromJs ($tokens) {
+		debug("looking for comma expression");
+		$expressions = array();
+		while ($tokens->valid()) {
+			$expression = YieldExpression::fromJs($tokens);
+			if (!$expression) break;
+			$expressions[] = $expression;
+			if (!Symbol::fromJs($tokens, ",")) break;
+		}
+		if (count($expressions) > 1) {
+			debug("found comma expression");
+			return new self($expressions);
+		} else if (count($expressions) > 0) {
+			return $expressions[0];
+		} else {
+			return null;
+		}
+	}
+	public function toPhp ($indents) {
+		$pieces = "";
+		foreach ($this->expression as $expression) {
+			$pieces[] = $expression->toPhp($indents);
+		}
+		return implode(", ", $pieces);
 	}
 }
 
@@ -1683,7 +1821,7 @@ class VarDefinitionStatement {
 			$val = null;
 			debug("found var name {$name->name}");
 			if (Symbol::fromJs($tokens, "=")) {
-				$val = Expression::fromJs($tokens);
+				$val = AssignmentExpression::fromJs($tokens);
 			}
 			$pieces[] = new VarDefinitionPiece($name, $val);
 			if (!Symbol::fromJs($tokens, ",")) {
@@ -1982,13 +2120,9 @@ class FunctionBody {
 		debug("parsing function body");
 		$statements = array();
 		while ($tokens->valid()) {
-			if (
-				$statement = Statement::fromJs($tokens)
-			) {
-				$statements[] = $statement;
-				continue;
-			}
-			break;
+			$statement = Statement::fromJs($tokens);
+			if (!$statement) break;
+			$statements[] = $statement;
 		}
 		return new self($statements);
 	}

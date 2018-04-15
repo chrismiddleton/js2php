@@ -1340,6 +1340,24 @@ class ArglessNewExpression {
 	}
 }
 
+class PostfixIncrementExpression {
+	public function __construct ($expression) {
+		$this->expression = $expression;
+	}
+	public function toPhp ($indents) {
+		return $this->expression->toPhp($indents) . "++";
+	}
+}
+
+class PostfixDecrementExpression {
+	public function __construct ($expression) {
+		$this->expression = $expression;
+	}
+	public function toPhp ($indents) {
+		return $this->expression->toPhp($indents) . "--";
+	}
+}
+
 abstract class PostfixIncrementLevelExpression {
 	public static function fromJs ($tokens) {
 		$expression = ArglessNewExpression::fromJs($tokens);
@@ -1353,6 +1371,51 @@ abstract class PostfixIncrementLevelExpression {
 	}
 }
 
+class BitwiseNotExpression {
+	public function __construct ($expression) {
+		$this->expression = $expression;
+	}
+	public function toPhp ($indents) {
+		return "~" . $this->expression->toPhp($indents);
+	}
+}
+
+class PlusExpression {
+	public function __construct ($expression) {
+		$this->expression = $expression;
+	}
+	public function toPhp ($indents) {
+		return "+" . $this->expression->toPhp($indents);
+	}
+}
+
+class MinusExpression {
+	public function __construct ($expression) {
+		$this->expression = $expression;
+	}
+	public function toPhp ($indents) {
+		return "-" . $this->expression->toPhp($indents);
+	}
+}
+
+class PrefixIncrementExpression {
+	public function __construct ($expression) {
+		$this->expression = $expression;
+	}
+	public function toPhp ($indents) {
+		return "++" . $this->expression->toPhp($indents);
+	}
+}
+
+class PrefixDecrementExpression {
+	public function __construct ($expression) {
+		$this->expression = $expression;
+	}
+	public function toPhp ($indents) {
+		return "--" . $this->expression->toPhp($indents);
+	}
+}
+
 class TypeofExpression {
 	public function __construct ($expression) {
 		$this->expression = $expression;
@@ -1360,6 +1423,36 @@ class TypeofExpression {
 	public function toPhp ($indents) {
 		// TODO: handle the different cases here
 		return "gettype(" . $this->expression->toPhp($indents) . ")";
+	}
+}
+
+class VoidExpression {
+	public function __construct ($expression) {
+		$this->expression = $expression;
+	}
+	public function toPhp ($indents) {
+		// TODO ?
+		return "(" . $this->expression->toPhp($indents) . " && true ? null : false)";
+	}
+}
+
+class DeleteExpression {
+	public function __construct ($expression) {
+		$this->expression = $expression;
+	}
+	public function toPhp ($indents) {
+		// TODO ?
+		return "unset(" . $this->expression->toPhp($indents) . ")";
+	}
+}
+
+class AwaitExpression {
+	public function __construct ($expression) {
+		$this->expression = $expression;
+	}
+	public function toPhp ($indents) {
+		// TODO ?
+		return "/* await */ " . $this->expression->toPhp($indents);
 	}
 }
 

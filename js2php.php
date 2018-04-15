@@ -644,19 +644,44 @@ class JsTokenizer {
 			"(", ")", "{", "}", "[", "]",
 			";", ",", ".", "\"", "'", "`"
 		);
+		$identifierSymbols = array("instanceof", "typeof", "await", "yield*", "yield", "in", "void", "delete", "new");
+		$lastRealToken = null;
 		while (!$parser->isDone()) {
 			if (
 				$token = MultilineCommentToken::parse($parser) or
 				$token = SingleLineCommentToken::parse($parser) or
-				$token = RegexToken::parse($parser) or
+				$token = SpaceToken::parse($parser)
+			) {
+				;
+			} else if (
+				(
+					!isset($lastRealToken) ||
+					(
+						!($lastRealToken instanceof DoubleQuotedStringToken) &&
+						!($lastRealToken instanceof SingleQuotedStringToken) &&
+						(
+							!($lastRealToken instanceof JsIdentifierToken) ||
+							in_array($lastRealToken->text, $identifierSymbols)
+						) &&
+						!($lastRealToken instanceof HexadecimalNumberToken) &&
+						!($lastRealToken instanceof NumberToken) &&
+						!($lastRealToken instanceof RegexToken)
+					)
+				) &&
+				$token = RegexToken::parse($parser)
+			) {
+				$lastRealToken = $token;
+			} else if (
 				$token = DoubleQuotedStringToken::parse($parser) or
 				$token = SingleQuotedStringToken::parse($parser) or
-				$token = SpaceToken::parse($parser) or
 				$token = SymbolToken::parse($parser, $symbols) or
 				$token = JsIdentifierToken::parse($parser) or
 				$token = HexadecimalNumberToken::parse($parser) or
 				$token = NumberToken::parse($parser)
 			) {
+				$lastRealToken = $token;
+			}
+			if ($token) {
 				$tokens[] = $token;
 				continue;
 			}

@@ -249,6 +249,29 @@ class NumberToken extends Token {
 	}
 }
 
+class HexadecimalNumberToken extends Token {
+	public function __construct ($parser, $text) {
+		parent::__construct($parser);
+		// includes the hex digits only
+		$this->text = $text;
+	}
+	public static function parse ($parser) {
+		$number = "";
+		if (!$parser->readString("0x")) return null;
+		while (!$parser->isDone()) {
+			$c = $parser->peek();
+			if (stripos("0123456789abcdef", $c) === false) break;
+			$number .= $c;
+			$parser->advance();
+		}
+		if (!strlen($number)) throw new Exception("Expected hexadecimal number after '0x'");
+		return new self($parser, $number);
+	}
+	public function __toString () {
+		return "0x" . $this->text;
+	}
+}
+
 class DoubleQuotedStringToken extends Token {
 	public function __construct ($parser, $text) {
 		parent::__construct($parser);
@@ -623,6 +646,7 @@ class JsTokenizer {
 				$token = SpaceToken::parse($parser) or
 				$token = SymbolToken::parse($parser, $symbols) or
 				$token = JsIdentifierToken::parse($parser) or
+				$token = HexadecimalNumberToken::parse($parser) or
 				$token = NumberToken::parse($parser)
 			) {
 				$tokens[] = $token;
@@ -1056,6 +1080,27 @@ class DecimalNumberExpression extends Expression {
 	}
 }
 
+class HexadecimalNumberExpression extends Expression {
+	public function __construct ($token) {
+		$this->token = $token;
+	}
+	public static function fromJs ($tokens) {
+		$start = $tokens->key();
+		debug("looking for hexadecimal number expression");
+		Comments::fromJs($tokens);
+		$token = $tokens->current();
+		if (!$token || !($token instanceof HexadecimalNumberToken)) {
+			$tokens->seek($start);
+			return null;
+		}
+		$tokens->next();
+		return new self($token);
+	}
+	public function toPhp ($indents) {
+		return (string) $this->token;
+	}
+}
+
 class RegexExpression extends Expression {
 	public function __construct ($token) {
 		$this->token = $token;
@@ -1177,7 +1222,7 @@ abstract class SimpleExpression extends Expression {
 			$expression = FunctionExpression::fromJs($tokens) or
 			$expression = IdentifierExpression::fromJs($tokens) or
 			$expression = DecimalNumberExpression::fromJs($tokens) or
-// 			$expression = HexadecimalNumberExpression::fromJs($tokens) or
+			$expression = HexadecimalNumberExpression::fromJs($tokens) or
 			$expression = DoubleQuotedStringExpression::fromJs($tokens) or
 			$expression = SingleQuotedStringExpression::fromJs($tokens) or
 			$expression = RegexExpression::fromJs($tokens)

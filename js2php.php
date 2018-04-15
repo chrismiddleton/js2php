@@ -1397,7 +1397,10 @@ class FunctionCallExpression extends Expression {
 						$params[0]
 					);
 					return $expression->toPhp();
-				} else if ($func->property->name === "slice") {
+				}/* else if ($func->property->name === "slice") {
+					$newParams = array(
+					if (count($params) >= 2) {
+						$newParams
 					$expression = new FunctionCallExpression(
 						"php",
 						// TODO: should probably change this to instead be FunctionIdentifierExpression on the outside, if it works
@@ -1413,7 +1416,7 @@ class FunctionCallExpression extends Expression {
 						)
 					);
 					return $expression->toPhp($indents);
-				}
+				}*/
 			}
 		}
 		$paramStrs = array();

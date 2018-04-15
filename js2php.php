@@ -1787,7 +1787,7 @@ class TernaryExpression extends Expression {
 		if (!Symbol::fromJs($tokens, ":")) {
 			throw new TokenException($tokens, "Expected ':' after yes value in ternary");
 		}
-		if (!($no = LogicalOrExpression::fromJs($tokens))) {
+		if (!($no = TernaryExpression::fromJs($tokens))) {
 			throw new TokenException($tokens, "Expected 'no' value after ':' in ternary expression");
 		}
 		return new self($test, $yes, $no);

@@ -785,7 +785,7 @@ class Keyword {
 
 // TODO: better name for this
 class VarDefinitionPiece {
-	public function __construct (Identifier $name, Expression $val = null) {
+	public function __construct ($name, $val = null) {
 		$this->name = $name;
 		$this->val = $val;
 	}
@@ -1200,7 +1200,7 @@ class BracketPropertyAccessExpression extends Expression {
 }
 
 class DotPropertyAccessExpression extends Expression {
-	public function __construct (Expression $object, PropertyIdentifier $property) {
+	public function __construct ($object, $property) {
 		$this->object = $object;
 		$this->property = $property;
 	}

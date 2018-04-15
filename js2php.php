@@ -2026,13 +2026,13 @@ class ForLoop {
 }
 
 class EmptyStatement {
-	private $instance = null;
+	private static $instance = null;
 	public static function fromJs ($tokens) {
 		if (Symbol::fromJs($tokens, ";")) return self::instance();
 	}
 	public function instance () {
-		if (!isset($this->instance)) $this->instance = new self();
-		return $this->instance;
+		if (!isset(self::$instance)) self::$instance = new self();
+		return self::$instance;
 	}
 	public function toPhp ($indents) {
 		return ";";

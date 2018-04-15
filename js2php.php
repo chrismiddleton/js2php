@@ -373,7 +373,7 @@ abstract class RegexSimpleElement {
 			$c = $parser->read();
 			if ($c == null) return null;
 			return new RegexEscapedCharacter($c);
-		} else if (!$inCharacterClass && strpos("|?*+", $c) !== false) {
+		} else if (!$inCharacterClass && strpos("|?*+()[]", $c) !== false) {
 			// Those characters are interpreted specially when we are outside of a character class
 			// (TODO: there are others too, but we aren't allowing for them at the moment)
 			return null;
@@ -455,6 +455,26 @@ class RegexCharacterClass {
 
 }
 
+class RegexCaptureGroup {
+	public function __construct ($element) {
+		$this->element = $element;
+	}
+	public static function parse ($parser) {
+		if (!$parser->readString("(")) return null;
+		$element = RegexAlternation::parse($parser);
+		if (!$element) {
+			throw new Exception("Expected regex element inside of capture group");
+		}
+		if (!$parser->readString(")")) {
+			echo substr($parser->str, $parser->i, 20); // fdo
+			throw new Exception("Unterminated regex capture group");
+		}
+	}
+	public function __toString () {
+		return "(" . $this->element . ")";
+	}
+}
+
 class RegexQuantifiedElement {
 
 	public function __construct ($element, $quantifier) {
@@ -465,15 +485,17 @@ class RegexQuantifiedElement {
 	public static function parse ($parser) {
 		$start = $parser->pos();
 		// TODO: handle groups as well
-		if ($element = RegexCharacterClass::parse($parser)) {
-			// let's see if we have a quantifier
-			if ($parser->readString("+")) {
-				return new self($element, "+");
-			} else if ($parser->readString("?")) {
-				return new self($element, "?");
-			} else if ($parser->readString("*")) {
-				return new self($element, "*");
-			} else if ($parser->readString("{")) {
+		if (
+			$element = RegexCharacterClass::parse($parser) or
+			$element = RegexCaptureGroup::parse($parser)
+		) {
+			$simpleQuantifiers = array("*?", "*", "+?", "+", "?");
+			foreach ($simpleQuantifiers as $quantifier) {
+				if ($parser->readString($quantifier)) {
+					return new self($element, $quantifier);
+				}
+			}
+			if ($parser->readString("{")) {
 				$from = NumberToken::parse($parser);
 				// TODO: for now, treating invalid regex as not regex
 				if (!$from) {
@@ -494,7 +516,6 @@ class RegexQuantifiedElement {
 				// just return the element we found
 				return $element;
 			}
-			// TODO: handle all the other quantifier cases like *?, +?, etc.
 		}
 	}
 	public function __toString () {

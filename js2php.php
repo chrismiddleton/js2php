@@ -2225,6 +2225,64 @@ class EmptyStatement {
 
 class WhileLoop {
 	// TODO
+	public function __construct ($test, $block) {
+		$this->test = $test;
+		$this->block = $block;
+	}
+	public static function fromJs ($tokens) {
+		debug("looking for while loop");
+		if (!Keyword::fromJs($tokens, "while")) return null;
+		debug("found while loop start");
+		if (!Symbol::fromJs($tokens, "(")) {
+			throw new TokenException($tokens, "Expected '(' after 'while' keyword");
+		}
+		$test = Expression::fromJs($tokens);
+		if (!$test) {
+			throw new TokenException($tokens, "Expected while loop test after '('");
+		}
+		if (!Symbol::fromJs($tokens, ")")) {
+			throw new TokenException($tokens, "Expected ')' after while loop test");
+		}
+		$block = Block::fromJs($tokens);
+		if (!$block) throw new TokenException($tokens, "Expected while loop body");
+		return new self($test, $block);
+	}
+	public function toPhp ($indents) {
+		return "while (" . $this->test->toPhp($indents) . ") " . $this->block->toPhp($indents);
+	}
+}
+
+class DoWhileLoop {
+	// TODO
+	public function __construct ($block, $test) {
+		$this->block = $block;
+		$this->test = $test;
+	}
+	public static function fromJs ($tokens) {
+		debug("looking for do-while loop");
+		if (!Keyword::fromJs($tokens, "do")) return null;
+		debug("found do-while loop start");
+		// TODO: require braces?
+		$block = Block::fromJs($tokens);
+		if (!$block) throw new TokenException($tokens, "Expected do-while loop body");
+		if (!Keyword::fromJs($tokens, "while")) {
+			throw new TokenException($tokens, "Expected 'while' keyword after do-while loop body");
+		}
+		if (!Symbol::fromJs($tokens, "(")) {
+			throw new TokenException($tokens, "Expected '(' after 'while' keyword");
+		}
+		$test = Expression::fromJs($tokens);
+		if (!$test) {
+			throw new TokenException($tokens, "Expected while loop test after '('");
+		}
+		if (!Symbol::fromJs($tokens, ")")) {
+			throw new TokenException($tokens, "Expected ')' after while loop test");
+		}
+		return new self($block, $test);
+	}
+	public function toPhp ($indents) {
+		return "do " . $this->block->toPhp($indents) . " while (" . $this->test->toPhp($indents) . ")";
+	}
 }
 
 class ForInLoop {
@@ -2274,10 +2332,6 @@ class ForOfLoop {
 	// TODO
 }
 
-class DoWhileLoop {
-	// TODO
-}
-
 abstract class Statement {
 	public static function fromJs ($tokens) {
 		$statement = EmptyStatement::fromJs($tokens) or
@@ -2286,6 +2340,8 @@ abstract class Statement {
 			$statement = ReturnStatement::fromJs($tokens) or
 			$statement = TryStatement::fromJs($tokens) or
 			$statement = ThrowStatement::fromJs($tokens) or
+			$statement = WhileLoop::fromJs($tokens) or
+			$statement = DoWhileLoop::fromJs($tokens) or
 			// for in loop first because the code in there allows for a 'for'
 			// that is something else, but not vice versa
 			$statement = ForInLoop::fromJs($tokens) or

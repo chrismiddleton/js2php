@@ -101,10 +101,10 @@ class StringParser {
 			$numEols -= 1;
 		}
 		if ($numEols > 0) {
-			$this->linePos += $numEols;
-			$this->charPos = 1 + strlen($parts[count($parts) - 1]);
+			$this->lineNum += $numEols;
+			$this->colNum = 1 + strlen($parts[count($parts) - 1]);
 		} else {
-			$this->charPos += strlen($str);
+			$this->colNum += strlen($str);
 		}
 		if ($str[$len - 1] === "\r") {
 			$this->readCR = true;
@@ -661,7 +661,7 @@ class JsTokenizer {
 						!($lastRealToken instanceof SingleQuotedStringToken) &&
 						(
 							!($lastRealToken instanceof JsIdentifierToken) ||
-							in_array($lastRealToken->text, $identifierSymbols)
+							in_array($lastRealToken->name, $identifierSymbols)
 						) &&
 						!($lastRealToken instanceof HexadecimalNumberToken) &&
 						!($lastRealToken instanceof NumberToken) &&
@@ -771,6 +771,7 @@ class Identifier {
 		$this->name = $name;
 	}
 	public static function fromJs (ArrayIterator $tokens) {
+		if (!$tokens->valid()) return null;
 		$start = $tokens->key();
 		Comments::fromJs($tokens);
 		$token = $tokens->current();
@@ -804,6 +805,7 @@ class Symbol {
 		$this->symbol = $symbol;
 	}
 	public static function fromJs ($tokens, $symbol = null) {
+		if (!$tokens->valid()) return null;
 		$start = $tokens->key();
 		Comments::fromJs($tokens);
 		$token = $tokens->current();
@@ -825,6 +827,7 @@ class Keyword {
 		$this->name = $name;
 	}
 	public static function fromJs (ArrayIterator $tokens, $keyword = null) {
+		if (!$tokens->valid()) return null;
 		$start = $tokens->key();
 		Comments::fromJs($tokens);
 		$token = $tokens->current();
@@ -882,6 +885,9 @@ class ParenthesizedExpression extends Expression {
 		}
 		return new self($expression);
 	}
+	public function toPhp ($indents) {
+		return "(" . $this->expression->toPhp($indents) . ")";
+	}
 }
 
 abstract class Expression {
@@ -916,6 +922,7 @@ class BooleanExpression extends Expression {
 		$this->val = $val;
 	}
 	public static function fromJs (ArrayIterator $tokens) {
+		if (!$tokens->valid()) return null;
 		$start = $tokens->key();
 		Comments::fromJs($tokens);
 		$token = $tokens->current();
@@ -940,6 +947,7 @@ class BooleanExpression extends Expression {
 class NullExpression extends Expression {
 	public function __construct () {}
 	public static function fromJs (ArrayIterator $tokens) {
+		if (!$tokens->valid()) return null;
 		$start = $tokens->key();
 		Comments::fromJs($tokens);
 		$token = $tokens->current();
@@ -960,6 +968,7 @@ class NullExpression extends Expression {
 class UndefinedExpression extends Expression {
 	public function __construct () {}
 	public static function fromJs (ArrayIterator $tokens) {
+		if (!$tokens->valid()) return null;
 		$start = $tokens->key();
 		Comments::fromJs($tokens);
 		$token = $tokens->current();
@@ -983,6 +992,7 @@ class DoubleQuotedStringExpression extends Expression {
 		$this->text = $text;
 	}
 	public static function fromJs (ArrayIterator $tokens) {
+		if (!$tokens->valid()) return null;
 		$start = $tokens->key();
 		Comments::fromJs($tokens);
 		$token = $tokens->current();
@@ -1005,6 +1015,7 @@ class SingleQuotedStringExpression extends Expression {
 		$this->text = $text;
 	}
 	public static function fromJs (ArrayIterator $tokens) {
+		if (!$tokens->valid()) return null;
 		$start = $tokens->key();
 		Comments::fromJs($tokens);
 		$token = $tokens->current();
@@ -1031,6 +1042,7 @@ class DecimalNumberExpression extends Expression {
 		$this->exp = $exp;
 	}
 	public static function fromJs (ArrayIterator $tokens) {
+		if (!$tokens->valid()) return null;
 		$start = $tokens->key();
 		
 		Comments::fromJs($tokens);
@@ -1118,6 +1130,7 @@ class HexadecimalNumberExpression extends Expression {
 		$this->token = $token;
 	}
 	public static function fromJs ($tokens) {
+		if (!$tokens->valid()) return null;
 		$start = $tokens->key();
 		debug("looking for hexadecimal number expression");
 		Comments::fromJs($tokens);
@@ -1139,6 +1152,7 @@ class RegexExpression extends Expression {
 		$this->token = $token;
 	}
 	public static function fromJs ($tokens) {
+		if (!$tokens->valid()) return null;
 		$start = $tokens->key();
 		debug("looking for regex expression");
 		Comments::fromJs($tokens);
@@ -1165,6 +1179,7 @@ class ArrayExpression extends Expression {
 		if (!Symbol::fromJs($tokens, "[")) {
 			return;
 		}
+		$elements = array();
 		while ($tokens->valid()) {
 			if (!($element = AssignmentExpression::fromJs($tokens))) break;
 			$elements[] = $element;
@@ -1199,6 +1214,7 @@ class ObjectExpression extends Expression {
 	}
 	public static function fromJs ($tokens) {
 		debug("looking for object expression");
+		if (!$tokens->valid()) return null;
 		$start = $tokens->key();
 		if (!Symbol::fromJs($tokens, "{")) {
 			debug("no '{' found");
@@ -1422,7 +1438,7 @@ class ArglessNewExpression {
 	}
 	public function toPhp ($indents) {
 		// TODO
-		return "new " . $this->expression;
+		return "new " . $this->expression->toPhp($indents);
 	}
 }
 
@@ -1624,7 +1640,6 @@ abstract class NotLevelExpression {
 
 function parseLeftAssociativeBinaryExpression ($tokens, $class, $symbols, $parseSymbol, $parseSubexpression) {
 	debug("looking for $class");
-	$start = $tokens->key();
 	$a = $parseSubexpression($tokens);
 	if (!$a) return;
 	while ($tokens->valid()) {
@@ -1887,6 +1902,7 @@ class AssignmentExpression extends Expression {
 		// TODO: verify that it's a valid LHS?
 		$left = TernaryExpression::fromJs($tokens);
 		if (!$left) return;
+		if (!$tokens->valid()) return null;
 		$afterLeft = $tokens->key();
 		$symbols = array("=", "+=", "-=", "*=", "/=", "%=", "<<=", ">>=", ">>>=", "~=", "^=", "&=", "|=");
 		foreach ($symbols as $symbol) {
@@ -1900,10 +1916,10 @@ class AssignmentExpression extends Expression {
 		debug("found '{$symbolFound->symbol}' expression");
 		$right = AssignmentExpression::fromJs($tokens);
 		if (!$right) throw new TokenException($tokens, "Expected RHS of assignment");
-		return new self($left, $symbol, $right);
+		return new self($left, $symbolFound, $right);
 	}
 	public function toPhp ($indents) {
-		return $left->toPhp($indents) . " {$this->symbol->symbol} " . $right->toPhp($indents);
+		return $this->left->toPhp($indents) . " {$this->symbol->symbol} " . $this->right->toPhp($indents);
 	}
 }
 
@@ -1976,7 +1992,7 @@ class SingleVarDeclaration {
 		return new self($declarator, $identifier);
 	}
 	public function toPhp ($indents) {
-		return ($declarator ? ("$declarator ") : "") . $this->identifier->toPhp($indents);
+		return ($this->declarator ? ("{$this->declarator} ") : "") . $this->identifier->toPhp($indents);
 	}
 }
 
@@ -2089,6 +2105,7 @@ class IfStatement {
 			throw new TokenException($tokens, "Expected ')' after if condition");
 		}
 		$ifBlock = Block::fromJs($tokens);
+		$elseBlock = null;
 		if (Keyword::fromJs($tokens, "else")) {
 			debug("found else");
 			$elseBlock = Block::fromJs($tokens);
@@ -2238,7 +2255,7 @@ class EmptyStatement {
 	public static function fromJs ($tokens) {
 		if (Symbol::fromJs($tokens, ";")) return self::instance();
 	}
-	public function instance () {
+	public static function instance () {
 		if (!isset(self::$instance)) self::$instance = new self();
 		return self::$instance;
 	}
@@ -2318,6 +2335,7 @@ class ForInLoop {
 	}
 	public static function fromJs ($tokens) {
 		debug("looking for for...in loop");
+		if (!$tokens->valid()) return null;
 		$start = $tokens->key();
 		if (!Keyword::fromJs($tokens, "for")) return null;
 		if (!Symbol::fromJs($tokens, "(")) {
@@ -2338,7 +2356,7 @@ class ForInLoop {
 		if (!Symbol::fromJs($tokens, ")")) {
 			throw new TokenException($tokens, "Expected ')' after for...in loop object");
 		}
-		if (!($block = Block::fromJs($tokens))) {
+		if (!($body = Block::fromJs($tokens))) {
 			throw new TokenException($tokens, "Expected block after for...in loop header");
 		}
 		return new self($declaration, $object, $body);
@@ -2407,6 +2425,7 @@ class FunctionDeclaration {
 		$this->body = $body;
 	}
 	public static function fromJs (ArrayIterator $tokens) {
+		if (!$tokens->valid()) return null;
 		$start = $tokens->key();
 		// get last doc block
 		while ($tokens->valid()) {
@@ -2434,6 +2453,7 @@ class FunctionDeclaration {
 		$params = array();
 		while ($tokens->valid()) {
 			$param = Identifier::fromJs($tokens);
+			if (!$param) break;
 			$params[] = $param;
 			debug("found param " . $param->name);
 			if (!Symbol::fromJs($tokens, ",")) break;
@@ -2448,6 +2468,7 @@ class FunctionDeclaration {
 		if (!Symbol::fromJs($tokens, "}")) {
 			throw new TokenException($tokens, "Expected closing '}' after function body");
 		}
+		echo "Read function declaration {$name->name}\n"; // fdo
 		return new self($name, $params, $body);
 	}
 	public function toPhp ($indents = "") {
@@ -2472,6 +2493,7 @@ class FunctionExpression extends Expression {
 		$this->body = $body;
 	}
 	public static function fromJs (ArrayIterator $tokens) {
+		if (!$tokens->valid()) return null;
 		$start = $tokens->key();
 		// get last doc block
 		while ($tokens->valid()) {
@@ -2495,7 +2517,9 @@ class FunctionExpression extends Expression {
 		// parse parameters
 		$params = array();
 		while ($tokens->valid()) {
-			$params[] = Identifier::fromJs($tokens);
+			$param = Identifier::fromJs($tokens);
+			if (!$param) break;
+			$params[] = $param;
 			if (!Symbol::fromJs($tokens, ",")) break;
 		}
 		if (!Symbol::fromJs($tokens, ")")) {
@@ -2533,15 +2557,13 @@ class Program {
 		$program = new Program();
 		while ($tokens->valid()) {
 			try {
-				if ($child = FunctionDeclaration::fromJs($tokens)) {
-					$program->children[] = $child;
-					continue;
-				} else if ($child = Expression::fromJs($tokens)) {
+				if ($child = Statement::fromJs($tokens)) {
 					$program->children[] = $child;
 				} else if (Comments::fromJs($tokens)) {
 					;
 				} else {
-					$token = $tokens->current();
+					// TODO: how are we getting here with tokens->valid() test above?
+					if (!$tokens->valid()) break;
 					throw new TokenException($tokens, "Unexpected token");
 				}
 			} catch (Exception $e) {

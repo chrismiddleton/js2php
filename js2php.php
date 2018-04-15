@@ -355,6 +355,10 @@ class RegexEscapedCharacter {
 abstract class RegexSimpleElement {
 	public static function parse ($parser, $inCharacterClass = false) {
 		// TODO: for now just parsing all as characters
+		if ($parser->readEol()) {
+			// invalid
+			return null;
+		}
 		$c = $parser->peek();
 		if ($c === "/") {
 			// terminates the regex
@@ -413,6 +417,10 @@ class RegexCharacterClass {
 				$negated = true;
 			}
 			while (!$parser->isDone()) {
+				if ($parser->readEol()) {
+					// invalid
+					break;
+				}
 				$c = $parser->peek();
 				if ($c === "]") {
 					$foundEnd = true;
@@ -582,7 +590,7 @@ class RegexToken extends Token {
 			return;
 		}
 		while (!$parser->isDone()) {
-			if ($parser->readString("/")) {
+			if ($parser->readString("/") || $parser->readEol()) {
 				// done reading the regex
 				break;
 			} else if ($element = RegexAlternation::parse($parser)) {

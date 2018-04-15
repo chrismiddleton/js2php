@@ -1834,7 +1834,7 @@ class TernaryExpression extends Expression {
 			return $test;
 		}
 		debug("found ternary expression");
-		if (!($yes = LogicalOrExpression::fromJs($tokens))) {
+		if (!($yes = TernaryExpression::fromJs($tokens))) {
 			throw new TokenException($tokens, "Expected 'yes' value after start of ternary ('?')");
 		}
 		if (!Symbol::fromJs($tokens, ":")) {

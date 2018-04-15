@@ -170,7 +170,7 @@ class JsIdentifierToken extends SymbolToken {
 		parent::__construct($parser, $name);
 		$this->name = $name;
 	}
-	public static function parse ($parser) {
+	public static function parse ($parser, $symbols) {
 		$c = $parser->peek();
 		if ($c !== "_" && $c !== "$" && !ctype_alpha($c)) {
 			return;
@@ -1250,7 +1250,7 @@ class ObjectExpression extends Expression {
 			$kvStrs[] = 
 				(
 					$pair->key instanceof PropertyIdentifier ?
-					var_export($pair->key, true) :
+					var_export($pair->key->name, true) :
 					$pair->key->toPhp($indents)
 				) .
 				" => " . 
@@ -1963,8 +1963,8 @@ class CommaExpression extends Expression {
 		}
 	}
 	public function toPhp ($indents) {
-		$pieces = "";
-		foreach ($this->expression as $expression) {
+		$pieces = array();
+		foreach ($this->expressions as $expression) {
 			$pieces[] = $expression->toPhp($indents);
 		}
 		return implode(", ", $pieces);
@@ -2084,7 +2084,7 @@ class ReturnStatement {
 		return new self($value);
 	}
 	public function toPhp ($indents) {
-		return "return " . $this->value->toPhp($indents) . ";\n";
+		return "return " . ($this->value ? $this->value->toPhp($indents) : "") . ";\n";
 	}
 }
 

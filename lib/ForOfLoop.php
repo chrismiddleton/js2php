@@ -1,0 +1,5 @@
+<?php
+
+class ForOfLoop {
+	// TODO
+}

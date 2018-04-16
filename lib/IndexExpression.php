@@ -7,8 +7,7 @@ class IndexExpression extends Expression {
 		$this->object = $object;
 		$this->index = $index;
 	}
-	// TODO: fromJs
-	public function toPhp ($indents = "") {
-		return $this->object->toPhp($indents) . "[" . $this->index->toPhp($indents) . "]";
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeIndexExpression($this, $indents);
 	}
 }

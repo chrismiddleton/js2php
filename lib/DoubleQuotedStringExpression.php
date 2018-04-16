@@ -21,8 +21,7 @@ class DoubleQuotedStringExpression extends Expression {
 		$tokens->next();
 		return new self($token->text);
 	}
-	public function toPhp ($indents) {
-		// TODO: this needs to be fixed since JS and PHP have different quoting (and variable interpolation)
-		return '"' . $this->text . '"';
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeDoubleQuotedStringExpression($this, $indents);
 	}
 }

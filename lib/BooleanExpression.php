@@ -26,7 +26,7 @@ class BooleanExpression extends Expression {
 		}
 		$tokens->seek($start);
 	}
-	public function toPhp ($indents) {
-		return $this->val ? "true" : "false";
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeBooleanExpression($this, $indents);
 	}
 }

@@ -61,16 +61,7 @@ class FunctionExpression extends Expression {
 		}
 		return new self($name, $params, $body);
 	}
-	public function toPhp ($indents = "") {
-		$code = "function " . ($this->name ? "{$this->name->name} " : "") . "(";
-		$paramStrs = array();
-		foreach ($this->params as $param) {
-			$paramStrs []= $param->toPhp($indents);
-		}
-		$code .= implode(", ", $paramStrs);
-		$code .= ") {\n";
-		$code .= $this->body->toPhp($indents . "\t");
-		$code .= $indents . "}";
-		return $code;
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeFunctionExpression($this, $indents);
 	}
 }

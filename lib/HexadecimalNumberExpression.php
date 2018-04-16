@@ -21,7 +21,7 @@ class HexadecimalNumberExpression extends Expression {
 		$tokens->next();
 		return new self($token);
 	}
-	public function toPhp ($indents) {
+	public function write (ProgramWriter $writer, $indents) {
 		return (string) $this->token;
 	}
 }

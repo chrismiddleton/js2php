@@ -6,8 +6,7 @@ class AwaitExpression {
 	public function __construct ($expression) {
 		$this->expression = $expression;
 	}
-	public function toPhp ($indents) {
-		// TODO ?
-		return "/* await */ " . $this->expression->toPhp($indents);
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeAwaitExpression($this, $indents);
 	}
 }

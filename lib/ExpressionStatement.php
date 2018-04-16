@@ -17,7 +17,7 @@ class ExpressionStatement {
 		Symbol::fromJs($tokens, ";");
 		return new self($expression);
 	}
-	public function toPhp ($indents) {
-		return $this->expression->toPhp($indents) . ";\n";
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeExpressionStatement($this, $indents);
 	}
 }

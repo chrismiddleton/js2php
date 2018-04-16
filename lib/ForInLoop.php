@@ -42,12 +42,7 @@ class ForInLoop {
 		}
 		return new self($declaration, $object, $body);
 	}
-	public function toPhp ($indents) {
-		return "for (" . 
-			$this->declaration->toPhp($indents) . 
-			" in " . 
-			$this->object->toPhp($indents) . 
-			") " . 
-			$this->body->toPhp($indents . "\t") . "\n";
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeForInLoop($this, $indents);
 	}
 }

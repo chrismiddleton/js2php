@@ -80,11 +80,13 @@ class DecimalNumberExpression extends Expression {
 			}
 		}
 		$object = new self($pos, $int, $dec, $expPos, $exp);
-		debug("found number " . $object->toPhp(""));
+		debug("found number " . $object->writeDefault(""));
 		return $object;
-		
 	}
-	public function toPhp ($indents) {
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeDecimalNumberExpression($this, $indents);
+	}
+	public function writeDefault ($indents) {
 		$code = "";
 		if (!$this->pos) $code .= "-";
 		if (isset($this->int)) $code .= $this->int;

@@ -11,7 +11,7 @@ class EmptyStatement {
 		if (!isset(self::$instance)) self::$instance = new self();
 		return self::$instance;
 	}
-	public function toPhp ($indents) {
+	public function write ($indents) {
 		return ";";
 	}
 }

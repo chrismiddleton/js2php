@@ -25,7 +25,7 @@ class SingleVarDeclaration {
 		debug("found single var declaration");
 		return new self($declarator, $identifier);
 	}
-	public function toPhp ($indents) {
-		return ($this->declarator ? ("{$this->declarator} ") : "") . $this->identifier->toPhp($indents);
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeSingleVarDeclaration($this, $indents);
 	}
 }

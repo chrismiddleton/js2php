@@ -43,13 +43,12 @@ class ForLoop {
 		if (!$body) throw new TokenException($tokens, "Expected for loop body");
 		return new self($init, $test, $update, $body);
 	}
-	public function toPhp ($indents) {
+	public function write (ProgramWriter $writer, $indents) {
 		return "for (" .
-			$this->init->toPhp($indents) .
+			$this->init->write($writer, $indents) .
 			" " .
-			$this->test->toPhp($indents) . 
-			($this->update ? (" " . $this->update->toPhp($indents)) : "") . 
-			") " . $this->body->toPhp($indents . "\t") . "\n";
-		return $code;
+			$this->test->write($writer, $indents) . 
+			($this->update ? (" " . $this->update->write($writer, $indents)) : "") . 
+			") " . $this->body->write($writer, $indents . "\t") . "\n";
 	}
 }

@@ -10,8 +10,7 @@ class PropertyIdentifier extends Identifier {
 		debug("found property identifier {$result->name}");
 		return new self($result->name);
 	}
-	public function toPhp ($indents) {
-		// no "$"
-		return $this->name;
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writePropertyIdentifier($this, $indents);
 	}
 }

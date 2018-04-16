@@ -33,7 +33,7 @@ class AssignmentExpression extends Expression {
 		if (!$right) throw new TokenException($tokens, "Expected RHS of assignment");
 		return new self($left, $symbolFound, $right);
 	}
-	public function toPhp ($indents) {
-		return $this->left->toPhp($indents) . " {$this->symbol->symbol} " . $this->right->toPhp($indents);
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeAssignmentExpression($this, $indents);
 	}
 }

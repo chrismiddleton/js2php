@@ -30,13 +30,7 @@ class Block {
 		}
 		return new self($statements, $brace);
 	}
-	public function toPhp ($indents) {
-		if (!$this->brace) return $this->statements[0]->toPhp($indents);
-		$code = "{\n";
-		foreach ($this->statements as $statement) {
-			$code .= $indents . "\t" . $statement->toPhp($indents . "\t");
-		}
-		$code .= $indents . "}\n";
-		return $code;
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeBlock($this, $indents);
 	}
 }

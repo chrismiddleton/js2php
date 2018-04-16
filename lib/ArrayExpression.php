@@ -26,12 +26,7 @@ class ArrayExpression extends Expression {
 		debug("found array expression");
 		return new self($elements);
 	}
-	public function toPhp ($indents) {
-		$elementStrs = array();
-		foreach ($this->elements as $element) {
-			$elementStrs[] = $element->toPhp($indents);
-		}
-		// TODO: array() vs []
-		return "array(" . implode(", ", $elementStrs) . ")";
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeArrayExpression($this, $indents);
 	}
 }

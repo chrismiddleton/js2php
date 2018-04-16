@@ -25,11 +25,7 @@ class DefaultSwitchCase {
 		}
 		return new self($blocks);
 	}
-	public function toPhp ($indents) {
-		$code = "default:\n";
-		foreach ($this->blocks as $block) {
-			$code .= "$indents\t" . $block->toPhp($indents . "\t");
-		}
-		return $code;
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeDefaultSwitchCase($this, $indents);
 	}
 }

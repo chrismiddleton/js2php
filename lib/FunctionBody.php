@@ -17,10 +17,10 @@ class FunctionBody {
 		}
 		return new self($statements);
 	}
-	public function toPhp ($indents) {
+	public function write (ProgramWriter $writer, $indents) {
 		$code = "";
 		foreach ($this->statements as $statement) {
-			$code .= $indents . $statement->toPhp($indents);
+			$code .= $indents . $statement->write($writer, $indents);
 		}
 		return $code;
 	}

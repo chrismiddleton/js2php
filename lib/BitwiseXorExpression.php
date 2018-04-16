@@ -20,7 +20,7 @@ class BitwiseXorExpression extends Expression {
 			array('BitwiseAndExpression', 'fromJs')
 		);
 	}
-	public function toPhp ($indents) {
-		return $this->a->toPhp($indents) . " {$this->symbol} " . $this->b->toPhp($indents);
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeBitwiseXorExpression($this, $indents);
 	}
 }

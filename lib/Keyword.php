@@ -19,7 +19,7 @@ class Keyword {
 		}
 		$tokens->seek($start);
 	}
-	public function toPhp ($indents) {
+	public function write (ProgramWriter $writer, $indents) {
 		return $this->name;
 	}
 }

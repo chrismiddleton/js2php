@@ -6,7 +6,7 @@ class VarDefinitionPiece {
 		$this->name = $name;
 		$this->val = $val;
 	}
-	public function toPhp ($indents) {
-		return $this->name->toPhp($indents) . " = " . ($this->val ? $this->val->toPhp($indents) : "null");
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeVarDefinitionPiece($this, $indents);
 	}
 }

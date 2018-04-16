@@ -30,8 +30,13 @@ class TernaryExpression extends Expression {
 		}
 		return new self($test, $yes, $no);
 	}
-	public function toPhp ($indents) {
+	public function write (ProgramWriter $writer, $indents) {
 		// parens due to php precedence difference
-		return $this->test->toPhp($indents) . " ? (" . $this->yes->toPhp($indents) . ") : (" . $this->no->toPhp($indents) . ")";
+		return $this->test->write($writer, $indents) . 
+			" ? (" . 
+			$this->yes->write($writer, $indents) . 
+			") : (" . 
+			$this->no->write($writer, $indents) . 
+			")";
 	}
 }

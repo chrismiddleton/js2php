@@ -35,12 +35,7 @@ class VarDefinitionStatement {
 		Symbol::fromJs($tokens, ";");
 		return new self($pieces);
 	}
-	public function toPhp ($indents) {
-		$codePieces = array();
-		// Can't do multiple on the same line in PHP
-		foreach ($this->pieces as $piece) {
-			$codePieces []= $piece->toPhp($indents) . ";";
-		}
-		return implode("\n" . $indents, $codePieces) . "\n";
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeVarDefinitionStatement($this, $indents);
 	}
 }

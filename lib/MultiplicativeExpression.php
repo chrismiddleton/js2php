@@ -21,7 +21,9 @@ class MultiplicativeExpression extends Expression {
 			array('NotLevelExpression', 'fromJs')
 		);
 	}
-	public function toPhp ($indents) {
-		return $this->a->toPhp($indents) . " {$this->symbol} " . $this->b->toPhp($indents);
+	public function write (ProgramWriter $writer, $indents) {
+		return $this->a->write($writer, $indents) .
+			" {$this->symbol} " . 
+			$this->b->write($writer, $indents);
 	}
 }

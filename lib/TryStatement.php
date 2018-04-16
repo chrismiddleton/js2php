@@ -38,15 +38,7 @@ class TryStatement {
 		}
 		return new self($tryBlock, $catchBlock, $catchParameter, $finallyBlock);
 	}
-	public function toPhp ($indents) {
-		$code = "try " . $this->tryBlock->toPhp($indents);
-		if ($this->catchBlock) {
-			$code .= " catch (" . $this->catchParameter->toPhp($indents) . ") ";
-			$code .= $this->catchBlock->toPhp($indents);
-		}
-		if ($this->finallyBlock) {
-			$code .= " finally " . $this->finallyBlock->toPhp($indents);
-		}
-		return $code;
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeTryStatement($this, $indents);
 	}
 }

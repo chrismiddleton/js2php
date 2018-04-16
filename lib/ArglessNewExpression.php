@@ -16,8 +16,7 @@ class ArglessNewExpression {
 		if (!$expression) throw new TokenException("Expected expression after 'new'");
 		return new self($expression);
 	}
-	public function toPhp ($indents) {
-		// TODO
-		return "new " . $this->expression->toPhp($indents);
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeArglessNewExpression($this, $indents);
 	}
 }

@@ -19,7 +19,7 @@ class ThrowStatement {
 		// TODO: handle cutting off early when newline (e.g. "return 5\n+6" should just return 5 in JS)
 		return new self($value);
 	}
-	public function toPhp ($indents) {
-		return "throw " . $this->value->toPhp($indents) . ";\n";
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeThrowStatement($this, $indents);
 	}
 }

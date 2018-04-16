@@ -21,7 +21,7 @@ class NullExpression extends Expression {
 		}
 		$tokens->seek($start);
 	}
-	public function toPhp ($indents) {
-		return "null";
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeNullExpression($this, $indents);
 	}
 }

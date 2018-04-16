@@ -20,7 +20,7 @@ class IdentifierExpression extends Expression {
 		debug("found identifier expression '{$identifier->name}'");
 		return new self($identifier);
 	}
-	public function toPhp ($indents) {
-		return $this->identifier->toPhp($indents);
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeIdentifierExpression($this, $indents);
 	}
 }

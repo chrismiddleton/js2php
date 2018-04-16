@@ -4,8 +4,7 @@ class DeleteExpression {
 	public function __construct ($expression) {
 		$this->expression = $expression;
 	}
-	public function toPhp ($indents) {
-		// TODO ?
-		return "unset(" . $this->expression->toPhp($indents) . ")";
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeDeleteExpression($this, $indents);
 	}
 }

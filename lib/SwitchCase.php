@@ -29,10 +29,10 @@ class SwitchCase {
 		}
 		return new self($value, $blocks);
 	}
-	public function toPhp ($indents) {
-		$code = "case " . $this->value->toPhp($indents) . ":\n";
+	public function write (ProgramWriter $writer, $indents) {
+		$code = "case " . $this->value->write($writer, $indents) . ":\n";
 		foreach ($this->blocks as $block) {
-			$code .= "$indents\t" . $block->toPhp($indents . "\t");
+			$code .= "$indents\t" . $block->write($writer, $indents . "\t");
 		}
 		return $code;
 	}

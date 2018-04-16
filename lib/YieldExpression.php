@@ -18,7 +18,7 @@ class YieldExpression extends Expression {
 		debug("found yield expression");
 		return new self($expression);
 	}
-	public function toPhp ($indents) {
-		return "yield " . $this->expression->toPhp($indents);
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeYieldExpression($this, $indents);
 	}
 }

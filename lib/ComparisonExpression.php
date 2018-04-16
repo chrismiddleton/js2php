@@ -20,7 +20,7 @@ class ComparisonExpression extends Expression {
 			array('BitwiseShiftExpression', 'fromJs')
 		);
 	}
-	public function toPhp ($indents) {
-		return $this->a->toPhp($indents) . " {$this->symbol} " . $this->b->toPhp($indents);
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeComparisonExpression($this, $indents);
 	}
 }

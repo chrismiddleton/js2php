@@ -8,4 +8,7 @@ class Program {
 	public function __construct () {
 		$this->children = array();
 	}
+	public function write (ProgramWriter $writer, $indents = "") {
+		return $writer->writeProgram($this, $indents);
+	}
 }

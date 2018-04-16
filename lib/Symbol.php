@@ -20,7 +20,7 @@ class Symbol {
 		}
 		$tokens->seek($start);
 	}
-	public function toPhp ($indents) {
+	public function write (ProgramWriter $writer, $indents) {
 		// Note: this only used as throwaway, so it's OK that there's no conversion here
 		return $this->symbol;
 	}

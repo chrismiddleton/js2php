@@ -22,9 +22,7 @@ class RegexExpression extends Expression {
 		$tokens->next();
 		return new self($token);
 	}
-	public function toPhp ($indents) {
-		// TODO: needs to be a string, for one
-		$string = (string) $this->token;
-		return var_export($string, true);
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeRegexExpression($this, $indents);
 	}
 }

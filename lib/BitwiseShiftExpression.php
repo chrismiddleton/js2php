@@ -20,7 +20,7 @@ class BitwiseShiftExpression extends Expression {
 			array('AdditiveExpression', 'fromJs')
 		);
 	}
-	public function toPhp ($indents) {
-		return $this->a->toPhp($indents) . " {$this->symbol} " . $this->b->toPhp($indents);
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeBitwiseShiftExpression($this, $indents);
 	}
 }

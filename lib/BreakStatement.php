@@ -9,7 +9,7 @@ class BreakStatement {
 		if (!Keyword::fromJs($tokens, "break")) return null;
 		return new self();
 	}
-	public function toPhp ($indents) {
-		return "break;";
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeBreakStatement($this, $indents);
 	}
 }

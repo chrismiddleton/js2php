@@ -35,7 +35,7 @@ class DoWhileLoop {
 		}
 		return new self($block, $test);
 	}
-	public function toPhp ($indents) {
-		return "do " . $this->block->toPhp($indents) . " while (" . $this->test->toPhp($indents) . ")";
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeDoWhileLoop($this, $indents);
 	}
 }

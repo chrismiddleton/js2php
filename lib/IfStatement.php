@@ -31,14 +31,7 @@ class IfStatement {
 		}
 		return new self ($condition, $ifBlock, $elseBlock);
 	}
-	public function toPhp ($indents) {
-		$code = "if (" . $this->condition->toPhp($indents) . ") ";
-		$code .= $this->ifBlock->toPhp($indents);
-		if ($this->elseBlock) {
-			// remove final EOL - todo: better way to do this?
-			$code = substr($code, 0, -1);
-			$code .= " else " . $this->elseBlock->toPhp($indents);
-		}
-		return $code;
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeIfStatement($this, $indents);
 	}
 }

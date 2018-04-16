@@ -19,8 +19,7 @@ class UndefinedExpression extends Expression {
 		}
 		$tokens->seek($start);
 	}
-	public function toPhp ($indents) {
-		// TODO: handling of difference somehow?
-		return "null";
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeUndefinedExpression($this, $indents);
 	}
 }

@@ -7,8 +7,7 @@ class BracketPropertyAccessExpression extends Expression {
 		$this->object = $object;
 		$this->property = $property;
 	}
-	public function toPhp ($indents) {
-		// TODO: this isn't quite right
-		return $this->object->toPhp($indents) . "->" . $this->property->toPhp($indents);
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeBracketPropertyAccessExpression($this, $indents);
 	}
 }

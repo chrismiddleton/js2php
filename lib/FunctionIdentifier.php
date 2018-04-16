@@ -10,8 +10,7 @@ class FunctionIdentifier extends Identifier {
 		debug("found function identifier {$result->name}");
 		return new self($result->name);
 	}
-	public function toPhp ($indents) {
-		// no "$"
-		return $this->name;
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeFunctionIdentifier($this, $indents);
 	}
 }

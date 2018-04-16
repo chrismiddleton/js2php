@@ -31,7 +31,7 @@ class WhileLoop {
 		if (!$block) throw new TokenException($tokens, "Expected while loop body");
 		return new self($test, $block);
 	}
-	public function toPhp ($indents) {
-		return "while (" . $this->test->toPhp($indents) . ") " . $this->block->toPhp($indents);
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeWhileLoop($this, $indents);
 	}
 }

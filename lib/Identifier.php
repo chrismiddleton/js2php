@@ -19,7 +19,7 @@ class Identifier {
 		}
 		$token = $tokens->current();
 	}
-	public function toPhp ($indents) {
-		return "$" . $this->name;
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeIdentifier($this, $indents);
 	}
 }

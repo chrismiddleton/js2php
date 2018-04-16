@@ -46,18 +46,7 @@ class ObjectExpression extends Expression {
 		debug("found object expression");
 		return new self($pairs);
 	}
-	public function toPhp ($indents) {
-		$kvStrs = array();
-		foreach ($this->pairs as $pair) {
-			$kvStrs[] = 
-				(
-					$pair->key instanceof PropertyIdentifier ?
-					var_export($pair->key->name, true) :
-					$pair->key->toPhp($indents)
-				) .
-				" => " . 
-				$pair->val->toPhp($indents);
-		}
-		return "array(" . implode(", ", $kvStrs) . ")";
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeObjectExpression($this, $indents);
 	}
 }

@@ -39,10 +39,10 @@ class SwitchStatement {
 		}
 		return new self($test, $cases);
 	}
-	public function toPhp ($indents) {
-		$code = "switch (" . $this->test->toPhp($indents) . ") {\n";
+	public function write (ProgramWriter $writer, $indents) {
+		$code = "switch (" . $this->test->write($writer, $indents) . ") {\n";
 		foreach ($this->cases as $switchCase) {
-			$code .= "$indents\t" . $switchCase->toPhp($indents . "\t") . "\n";
+			$code .= "$indents\t" . $switchCase->write($writer, $indents . "\t") . "\n";
 		}
 		$code .= "$indents}\n";
 		return $code;

@@ -27,11 +27,7 @@ class CommaExpression extends Expression {
 			return null;
 		}
 	}
-	public function toPhp ($indents) {
-		$pieces = array();
-		foreach ($this->expressions as $expression) {
-			$pieces[] = $expression->toPhp($indents);
-		}
-		return implode(", ", $pieces);
+	public function write (ProgramWriter $writer, $indents) {
+		return $writer->writeCommaExpression($this, $indents);
 	}
 }

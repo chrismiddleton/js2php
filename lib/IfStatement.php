@@ -13,24 +13,6 @@ class IfStatement {
 		$this->ifBlock = $ifBlock;
 		$this->elseBlock = $elseBlock;
 	}
-	public static function fromJs (ArrayIterator $tokens) {
-		if (!Keyword::fromJs($tokens, "if")) return null;
-		debug("found if statement");
-		if (!Symbol::fromJs($tokens, "(")) {
-			throw new TokenException($tokens, "Expected '(' after if");
-		}
-		$condition = Expression::fromJs($tokens);
-		if (!Symbol::fromJs($tokens, ")")) {
-			throw new TokenException($tokens, "Expected ')' after if condition");
-		}
-		$ifBlock = Block::fromJs($tokens);
-		$elseBlock = null;
-		if (Keyword::fromJs($tokens, "else")) {
-			debug("found else");
-			$elseBlock = Block::fromJs($tokens);
-		}
-		return new self ($condition, $ifBlock, $elseBlock);
-	}
 	public function write (ProgramWriter $writer, $indents) {
 		return $writer->writeIfStatement($this, $indents);
 	}

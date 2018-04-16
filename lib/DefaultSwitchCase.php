@@ -10,21 +10,6 @@ class DefaultSwitchCase {
 	public function __construct ($blocks) {
 		$this->blocks = $blocks;
 	}
-	public static function fromJs (ArrayIterator $tokens) {
-		debug("looking for default switch case");
-		if (!Keyword::fromJs($tokens, "default")) return null;
-		debug("found start of default switch case");
-		if (!Symbol::fromJs($tokens, ":")) {
-			throw new TokenException($tokens, "Expected ':' after switch case value");
-		}
-		$blocks = array();
-		while ($tokens->valid()) {
-			$block = Block::fromJs($tokens);
-			if (!$block) break;
-			$blocks[] = $block;
-		}
-		return new self($blocks);
-	}
 	public function write (ProgramWriter $writer, $indents) {
 		return $writer->writeDefaultSwitchCase($this, $indents);
 	}

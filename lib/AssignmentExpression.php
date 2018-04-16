@@ -12,27 +12,6 @@ class AssignmentExpression extends Expression {
 		$this->symbol = $symbol;
 		$this->right = $right;
 	}
-	public static function fromJs (ArrayIterator $tokens) {
-		debug("looking for assignment expression");
-		// TODO: verify that it's a valid LHS?
-		$left = TernaryExpression::fromJs($tokens);
-		if (!$left) return;
-		if (!$tokens->valid()) return null;
-		$afterLeft = $tokens->key();
-		$symbols = array("=", "+=", "-=", "*=", "/=", "%=", "<<=", ">>=", ">>>=", "~=", "^=", "&=", "|=");
-		foreach ($symbols as $symbol) {
-			$symbolFound = Symbol::fromJs($tokens, $symbol);
-			if ($symbolFound) break;
-		}
-		if (!$symbolFound) {
-			$tokens->seek($afterLeft);
-			return $left;
-		}
-		debug("found '{$symbolFound->symbol}' expression");
-		$right = AssignmentExpression::fromJs($tokens);
-		if (!$right) throw new TokenException($tokens, "Expected RHS of assignment");
-		return new self($left, $symbolFound, $right);
-	}
 	public function write (ProgramWriter $writer, $indents) {
 		return $writer->writeAssignmentExpression($this, $indents);
 	}

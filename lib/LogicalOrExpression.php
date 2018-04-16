@@ -11,15 +11,6 @@ class LogicalOrExpression extends Expression {
 		$this->symbol = $symbol;
 		$this->b = $b;
 	}
-	public static function fromJs (ArrayIterator $tokens) {
-		return parseLeftAssociativeBinaryExpression(
-			$tokens,
-			__CLASS__,
-			array('||'),
-			array('Symbol', 'fromJs'),
-			array('LogicalAndExpression', 'fromJs')
-		);
-	}
 	public function write (ProgramWriter $writer, $indents) {
 		return $writer->writeLogicalOrExpression($this, $indents);
 	}

@@ -8,15 +8,6 @@ class ExpressionStatement {
 	public function __construct ($expression) {
 		$this->expression = $expression;
 	}
-	public static function fromJs (ArrayIterator $tokens) {
-		debug("looking for expression statement");
-		if (!($expression = Expression::fromJs($tokens))) return;
-		debug("found expression statement");
-		// TODO: make it either eat a semicolon or a newline
-		// semicolon optional
-		Symbol::fromJs($tokens, ";");
-		return new self($expression);
-	}
 	public function write (ProgramWriter $writer, $indents) {
 		return $writer->writeExpressionStatement($this, $indents);
 	}

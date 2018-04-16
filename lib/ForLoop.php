@@ -21,28 +21,6 @@ class ForLoop {
 		// block
 		$this->body = $body;
 	}
-	public static function fromJs (ArrayIterator $tokens) {
-		debug("looking for 'for' loop");
-		if (!Keyword::fromJs($tokens, "for")) return null;
-		debug("found 'for' loop");
-		if (!Symbol::fromJs($tokens, "(")) {
-			throw new TokenException($tokens, "Expected '(' after 'for' keyword");
-		}
-		$init = VarDefinitionStatement::fromJs($tokens) or
-			$init = ExpressionStatement::fromJs($tokens) or
-			$init = EmptyStatement::fromJs($tokens);
-		if (!$init) throw new TokenException($tokens, "Expected for loop initialization");
-		$test = ExpressionStatement::fromJs($tokens) or
-			$test = EmptyStatement::fromJs($tokens);
-		if (!$test) throw new TokenException($tokens, "Expected for loop test");
-		$update = Expression::fromJs($tokens);
-		if (!Symbol::fromJs($tokens, ")")) {
-			throw new TokenException($tokens, "Expected ')' after for loop header");
-		}
-		$body = Block::fromJs($tokens);
-		if (!$body) throw new TokenException($tokens, "Expected for loop body");
-		return new self($init, $test, $update, $body);
-	}
 	public function write (ProgramWriter $writer, $indents) {
 		return "for (" .
 			$this->init->write($writer, $indents) .

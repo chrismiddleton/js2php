@@ -10,14 +10,6 @@ class YieldExpression extends Expression {
 	public function __construct ($expression) {
 		$this->expression = $expression;
 	}
-	public static function fromJs (ArrayIterator $tokens) {
-		debug("looking for yield expression");
-		if (!Symbol::fromJs($tokens, "yield")) return AssignmentExpression::fromJs($tokens);
-		$expression = YieldExpression::fromJs($tokens);
-		if (!$expression) throw new TokenException($tokens, "Expected expression after 'yield'");
-		debug("found yield expression");
-		return new self($expression);
-	}
 	public function write (ProgramWriter $writer, $indents) {
 		return $writer->writeYieldExpression($this, $indents);
 	}

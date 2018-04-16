@@ -10,20 +10,6 @@ class ParenthesizedExpression extends Expression {
 	public function __construct ($expression) {
 		$this->expression = $expression;
 	}
-	public static function fromJs (ArrayIterator $tokens) {
-		if (!Symbol::fromJs($tokens, "(")) {
-			return SimpleExpression::fromJs($tokens);
-		}
-		debug("found parenthesized expression start");
-		$expression = Expression::fromJs($tokens);
-		if (!$expression) {
-			throw new TokenException($tokens, "Expected expression after '('");
-		}
-		if (!Symbol::fromJs($tokens, ")")) {
-			throw new TokenException($tokens, "Expected ')' after expression");
-		}
-		return new self($expression);
-	}
 	public function write (ProgramWriter $writer, $indents) {
 		return "(" . $this->expression->write($writer, $indents) . ")";
 	}

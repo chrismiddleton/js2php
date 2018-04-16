@@ -13,28 +13,6 @@ class DoWhileLoop {
 		$this->block = $block;
 		$this->test = $test;
 	}
-	public static function fromJs (ArrayIterator $tokens) {
-		debug("looking for do-while loop");
-		if (!Keyword::fromJs($tokens, "do")) return null;
-		debug("found do-while loop start");
-		// TODO: require braces?
-		$block = Block::fromJs($tokens);
-		if (!$block) throw new TokenException($tokens, "Expected do-while loop body");
-		if (!Keyword::fromJs($tokens, "while")) {
-			throw new TokenException($tokens, "Expected 'while' keyword after do-while loop body");
-		}
-		if (!Symbol::fromJs($tokens, "(")) {
-			throw new TokenException($tokens, "Expected '(' after 'while' keyword");
-		}
-		$test = Expression::fromJs($tokens);
-		if (!$test) {
-			throw new TokenException($tokens, "Expected while loop test after '('");
-		}
-		if (!Symbol::fromJs($tokens, ")")) {
-			throw new TokenException($tokens, "Expected ')' after while loop test");
-		}
-		return new self($block, $test);
-	}
 	public function write (ProgramWriter $writer, $indents) {
 		return $writer->writeDoWhileLoop($this, $indents);
 	}

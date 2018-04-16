@@ -11,15 +11,6 @@ class ComparisonExpression extends Expression {
 		$this->symbol = $symbol;
 		$this->b = $b;
 	}
-	public static function fromJs (ArrayIterator $tokens) {
-		return parseLeftAssociativeBinaryExpression(
-			$tokens,
-			__CLASS__,
-			array('<=', '<', '>=', '>', 'in', 'instanceof'),
-			array('Symbol', 'fromJs'),
-			array('BitwiseShiftExpression', 'fromJs')
-		);
-	}
 	public function write (ProgramWriter $writer, $indents) {
 		return $writer->writeComparisonExpression($this, $indents);
 	}

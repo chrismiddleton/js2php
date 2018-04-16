@@ -9,16 +9,6 @@ class ReturnStatement {
 	public function __construct ($value) {
 		$this->value = $value;
 	}
-	public static function fromJs (ArrayIterator $tokens) {
-		if (!Keyword::fromJs($tokens, "return")) return;
-		debug("found return statement");
-		// can be null, that's OK
-		$value = Expression::fromJs($tokens);
-		// optional semicolon
-		Symbol::fromJs($tokens, ";");
-		// TODO: handle cutting off early when newline (e.g. "return 5\n+6" should just return 5 in JS)
-		return new self($value);
-	}
 	public function write (ProgramWriter $writer, $indents) {
 		return "return " . ($this->value ? $this->value->write($writer, $indents) : "") . ";\n";
 	}

@@ -67,8 +67,9 @@ class PhpWriter extends ProgramWriter {
 	public function writeBracketPropertyAccessExpression (BracketPropertyAccessExpression $expression, $indents) {
 		// TODO: this isn't quite right
 		return $expression->object->write($this, $indents) . 
-			"->" . 
-			$expression->property->write($this, $indents);
+			"->{" . 
+			$expression->property->write($this, $indents) . 
+			"}";
 	}
 	public function writeBreakStatement (BreakStatement $statement, $indents) {
 		return "break;";

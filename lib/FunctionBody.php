@@ -7,16 +7,6 @@ class FunctionBody {
 	public function __construct ($statements) {
 		$this->statements = $statements;
 	}
-	public static function fromJs (ArrayIterator $tokens) {
-		debug("parsing function body");
-		$statements = array();
-		while ($tokens->valid()) {
-			$statement = Statement::fromJs($tokens);
-			if (!$statement) break;
-			$statements[] = $statement;
-		}
-		return new self($statements);
-	}
 	public function write (ProgramWriter $writer, $indents) {
 		$code = "";
 		foreach ($this->statements as $statement) {

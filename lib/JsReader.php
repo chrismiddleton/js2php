@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . "/AdditiveExpression.php";
+require_once __DIR__ . "/BreakStatement.php";
 require_once __DIR__ . "/JsTokenizer.php";
 require_once __DIR__ . "/parseLeftAssociativeBinaryExpression.php";
 require_once __DIR__ . "/Program.php";
@@ -146,6 +148,9 @@ class JsReader extends ProgramReader {
 	}
 	public function readBreakStatement (ArrayIterator $tokens) {
 		if (!$this->readKeyword($tokens, "break")) return null;
+		// semicolon optional
+		$this->readSymbol($tokens, ";");
+		return new BreakStatement();
 	}
 	public function readCommaExpression (ArrayIterator $tokens) {
 		debug("looking for comma expression");
@@ -390,6 +395,16 @@ class JsReader extends ProgramReader {
 		}
 		return new ForInLoop($declaration, $object, $body);
 	}
+	public function readFunctionBody (ArrayIterator $tokens) {
+		debug("parsing function body");
+		$statements = array();
+		while ($tokens->valid()) {
+			$statement = $this->readStatement($tokens);
+			if (!$statement) break;
+			$statements[] = $statement;
+		}
+		return new FunctionBody($statements);
+	}
 	public function readFunctionCallLevelExpression (ArrayIterator $tokens) {
 		debug("looking for function call level expression");
 		$expression = $this->readParenthesizedExpression($tokens);
@@ -518,6 +533,12 @@ class JsReader extends ProgramReader {
 		}
 		return new FunctionExpression($name, $params, $body);
 	}
+	public function readFunctionIdentifier (ArrayIterator $tokens) {
+		$result = $this->readIdentifier($tokens);
+		if (!$result) return null;
+		debug("found function identifier {$result->name}");
+		return new FunctionIdentifier($result->name);
+	}
 	public function readHexadecimalNumberExpression (ArrayIterator $tokens) {
 		if (!$tokens->valid()) return null;
 		$start = $tokens->key();
@@ -566,6 +587,9 @@ class JsReader extends ProgramReader {
 			throw new TokenException($tokens, "Expected ')' after if condition");
 		}
 		$ifBlock = $this->readBlock($tokens);
+		if (!$ifBlock) {
+			throw new TokenException($tokens, "Expected block after if condition");
+		}
 		$elseBlock = null;
 		if ($this->readKeyword($tokens, "else")) {
 			debug("found else");
@@ -861,6 +885,21 @@ class JsReader extends ProgramReader {
 		$tokens->next();
 		return new SingleQuotedStringExpression($token->text);
 	}
+	public function readSingleVarDeclaration (ArrayIterator $tokens) {
+		debug("looking for single var declaration");
+		$declarator = null;
+		if ($this->readKeyword($tokens, "var")) {
+			$declarator = "var";
+		}
+		if (!($identifier = $this->readIdentifier($tokens))) {
+			if ($declarator) {
+				throw new TokenException($tokens, "Expected identifier after '$declarator'");
+			}
+			return null;
+		}
+		debug("found single var declaration");
+		return new SingleVarDeclaration($declarator, $identifier);
+	}
 	public function readSpace (ArrayIterator $tokens) {
 		$token = $tokens->current();
 		if ($token && $token instanceof SpaceToken) {
@@ -973,7 +1012,7 @@ class JsReader extends ProgramReader {
 		if (!$this->readKeyword($tokens, "throw")) return null;
 		debug("found throw statement");
 		// can be null, that's OK
-		$value = $this->readeExpression($tokens);
+		$value = $this->readExpression($tokens);
 		// optional semicolon
 		$this->readSymbol($tokens, ";");
 		// TODO: handle cutting off early when newline (e.g. "return 5\n+6" should just return 5 in JS)

@@ -202,6 +202,7 @@ class PhpWriter extends ProgramWriter {
 	}
 	public function writeIfStatement (IfStatement $statement, $indents) {
 		$code = "if (" . $statement->condition->write($this, $indents) . ") ";
+		if (!$statement->ifBlock) var_dump($statement); // fdo
 		$code .= $statement->ifBlock->write($this, $indents);
 		if ($statement->elseBlock) {
 			// remove final EOL - todo: better way to do this?

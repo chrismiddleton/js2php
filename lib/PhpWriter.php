@@ -136,11 +136,12 @@ class PhpWriter extends ProgramWriter {
 		return $statement->expression->write($this, $indents) . ";\n";
 	}
 	public function writeForInLoop (ForInLoop $loop, $indents) {
-		return "for (" . 
-			$loop->declaration->write($this, $indents) . 
-			" in " . 
+		return "foreach (" . 
 			$loop->object->write($this, $indents) . 
-			") " . 
+			" as " .
+			$loop->declaration->identifier->write($this, $indents) . 
+			// TODO: make sure $__ doesn't conflict
+			" => \$__)" .
 			$loop->body->write($this, $indents . "\t") . "\n";
 	}
 	public function writeFunctionCallExpression (FunctionCallExpression $expression, $indents) {

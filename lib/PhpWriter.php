@@ -100,9 +100,26 @@ class PhpWriter extends ProgramWriter {
 		return "unset(" . $expression->expression->write($this, $indents) . ")";
 	}
 	public function writeDotPropertyAccessExpression (DotPropertyAccessExpression $expression, $indents) {
-		return $expression->object->write($this, $indents) .
+		// TODO LATER: ensure __getProp doesn't conflict
+		$code = "";
+		if (
+			$expression->object instanceof ObjectExpression ||
+			$expression->object instanceof IdentifierExpression ||
+			$expression->object instanceof DotPropertyAccessExpression ||
+			$expression->object instanceof BracketPropertyAccessExpression ||
+			$expression->object instanceof FunctionCallExpression
+		) {
+			$code = $expression->object->write($this, $indents) .
 			 "->" . 
 			 $expression->property->write($this, $indents);
+		} else {
+			$code = "__getProp(" . 
+				$expression->object->write($this, $indents) . 
+				", " . 
+				var_export($expression->property->name, true) .
+				")";
+		}
+		return $code;
 	}
 	public function writeDoubleQuotedStringExpression (DoubleQuotedStringExpression $expression, $indents) {
 		// TODO: this needs to be fixed since JS and PHP have different quoting (and variable interpolation)
@@ -255,6 +272,7 @@ class PhpWriter extends ProgramWriter {
 		foreach ($program->children as $child) {
 			$code .= $child->write($this, $indents);
 		}
+		$code .= "\nfunction __getProp (\$obj, \$prop) { return \$obj->{\$prop}; }\n";
 		return $code;
 	}
 	public function writePropertyIdentifier (PropertyIdentifier $identifier, $indents) {

@@ -10,7 +10,7 @@ class FunctionBody extends Node {
 	public function write (ProgramWriter $writer, $indents = "") {
 		$code = parent::write($writer, $indents);
 		foreach ($this->statements as $statement) {
-			$code .= $indents . $statement->write($writer, $indents);
+			$code .= $indents . $statement->write($writer, $indents) . "\n";
 		}
 		return $code;
 	}

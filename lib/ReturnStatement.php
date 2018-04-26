@@ -11,6 +11,6 @@ class ReturnStatement extends Node {
 	}
 	public function write (ProgramWriter $writer, $indents = "") {
 		return parent::write($writer, $indents) . 
-			"return " . ($this->value ? $this->value->write($writer, $indents) : "") . ";\n";
+			$writer->writeReturnStatement($this, $indents);
 	}
 }

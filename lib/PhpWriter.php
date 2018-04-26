@@ -56,9 +56,9 @@ class PhpWriter extends ProgramWriter {
 		if (!$block->brace) return $block->statements[0]->write($this, $indents);
 		$code = "{\n";
 		foreach ($block->statements as $statement) {
-			$code .= $indents . "\t" . $statement->write($this, $indents . "\t");
+			$code .= $indents . "\t" . $statement->write($this, $indents . "\t") . "\n";
 		}
-		$code .= $indents . "}\n";
+		$code .= $indents . "}";
 		return $code;
 	}
 	public function writeBooleanExpression (BooleanExpression $expression, $indents = "") {
@@ -92,7 +92,7 @@ class PhpWriter extends ProgramWriter {
 	public function writeDefaultSwitchCase (DefaultSwitchCase $switchCase, $indents = "") {
 		$code = "default:\n";
 		foreach ($switchCase->blocks as $block) {
-			$code .= "$indents\t" . $block->write($this, $indents . "\t");
+			$code .= "$indents\t" . $block->write($this, $indents . "\t") . "\n";
 		}
 		return $code;
 	}
@@ -138,7 +138,7 @@ class PhpWriter extends ProgramWriter {
 			")";
 	}
 	public function writeExpressionStatement (ExpressionStatement $statement, $indents = "") {
-		return $statement->expression->write($this, $indents) . ";\n";
+		return $statement->expression->write($this, $indents) . ";";
 	}
 	public function writeForLoop (ForLoop $loop, $indents = "") {
 		return "for (" .
@@ -146,7 +146,7 @@ class PhpWriter extends ProgramWriter {
 			" " .
 			$loop->test->write($this, $indents) . 
 			($loop->update ? (" " . $loop->update->write($this, $indents)) : "") . 
-			") " . $loop->body->write($this, $indents . "\t") . "\n";
+			") " . $loop->body->write($this, $indents);
 	}
 	public function writeForInLoop (ForInLoop $loop, $indents = "") {
 		return "foreach (" . 
@@ -155,7 +155,7 @@ class PhpWriter extends ProgramWriter {
 			$loop->declaration->identifier->write($this, $indents) . 
 			// TODO: make sure $__ doesn't conflict
 			" => \$__)" .
-			$loop->body->write($this, $indents . "\t") . "\n";
+			$loop->body->write($this, $indents);
 	}
 	public function writeFunctionCallExpression (FunctionCallExpression $expression, $indents = "") {
 		$func = $expression->func;
@@ -204,9 +204,11 @@ class PhpWriter extends ProgramWriter {
 			$paramStrs []= $param->write($this, $indents);
 		}
 		$code .= implode(", ", $paramStrs);
-		$code .= ") {\n";
+		$code .= ") {";
+		if (count($declaration->body->statements)) $code .= "\n";
 		$code .= $declaration->body->write($this, $indents . "\t");
-		$code .= $indents . "}\n";
+		if (count($declaration->body->statements)) $code .= $indents;
+		$code .= "}";
 		return $code;
 	}
 	public function writeFunctionExpression (FunctionExpression $expression, $indents = "") {
@@ -216,9 +218,11 @@ class PhpWriter extends ProgramWriter {
 			$paramStrs []= $param->write($this, $indents);
 		}
 		$code .= implode(", ", $paramStrs);
-		$code .= ") {\n";
+		$code .= ") {";
+		if (count($expression->body->statements)) $code .= "\n";
 		$code .= $expression->body->write($this, $indents . "\t");
-		$code .= $indents . "}";
+		if (count($expression->body->statements)) $code .= $indents;
+		$code .= "}";
 		return $code;
 	}
 	public function writeFunctionIdentifier (FunctionIdentifier $identifier, $indents = "") {
@@ -233,12 +237,11 @@ class PhpWriter extends ProgramWriter {
 	}
 	public function writeIfStatement (IfStatement $statement, $indents = "") {
 		$code = "if (" . $statement->condition->write($this, $indents) . ") ";
-		if (!$statement->ifBlock) var_dump($statement); // fdo
 		$code .= $statement->ifBlock->write($this, $indents);
 		if ($statement->elseBlock) {
-			// remove final EOL - todo: better way to do this?
-			$code = substr($code, 0, -1);
-			$code .= " else " . $statement->elseBlock->write($this, $indents);
+			if (!$statement->ifBlock->brace) $code .= "\n$indents";
+			else $code. = " ";
+			$code .= "else " . $statement->elseBlock->write($this, $indents);
 		}
 		return $code;
 	}
@@ -260,7 +263,7 @@ class PhpWriter extends ProgramWriter {
 	}
 	public function writeMultilineComment (MultilineComment $comment, $indents = "") {
 		// TODO: handle cases of inline multiline comment
-		return "/*{$comment->text}*/\n";
+		return "/*{$comment->text}*/\n$indents";
 	}
 	public function writeNotExpression (NotExpression $expression, $indents = "") {
 		return "!" . $expression->expression->write($this, $indents);
@@ -288,9 +291,9 @@ class PhpWriter extends ProgramWriter {
 	public function writeProgram (Program $program, $indents = "") {
 		$code = "<?php\n";
 		foreach ($program->children as $child) {
-			$code .= $child->write($this, $indents);
+			$code .= $child->write($this, $indents) . "\n";
 		}
-		$code .= "\nfunction __getProp (\$obj, \$prop) { return \$obj->{\$prop}; }\n";
+		$code .= "function __getProp (\$obj, \$prop) { return \$obj->{\$prop}; }\n";
 		return $code;
 	}
 	public function writePropertyIdentifier (PropertyIdentifier $identifier, $indents = "") {
@@ -301,6 +304,9 @@ class PhpWriter extends ProgramWriter {
 		// TODO: needs to be a string, for one
 		$string = (string) $expression->token;
 		return var_export($string, true);
+	}
+	public function writeReturnStatement (ReturnStatement $statement, $indents = "") {
+		return "return " . ($statement->value ? $statement->value->write($this, $indents) : "") . ";";
 	}
 	public function writeSingleQuotedStringExpression (SingleQuotedStringExpression $expression, $indents = "") {
 		// TODO: this needs to be fixed since JS and PHP have different quoting
@@ -316,7 +322,7 @@ class PhpWriter extends ProgramWriter {
 	public function writeSwitchCase (SwitchCase $node, $indents = "") {
 		$code = "case " . $node->value->write($this, $indents) . ":\n";
 		foreach ($node->blocks as $block) {
-			$code .= "$indents\t" . $block->write($this, $indents . "\t");
+			$code .= "$indents\t" . $block->write($this, $indents . "\t") . "\n";
 		}
 		return $code;
 	}
@@ -325,11 +331,11 @@ class PhpWriter extends ProgramWriter {
 		foreach ($statement->cases as $switchCase) {
 			$code .= "$indents\t" . $switchCase->write($this, $indents . "\t");
 		}
-		$code .= "$indents}\n";
+		$code .= "$indents}";
 		return $code;
 	}
 	public function writeThrowStatement (ThrowStatement $statement, $indents = "") {
-		return "throw " . $statement->value->write($this, $indents) . ";\n";
+		return "throw " . $statement->value->write($this, $indents) . ";";
 	}
 	public function writeTryStatement (TryStatement $statement, $indents = "") {
 		$code = "try " . $statement->tryBlock->write($this, $indents);
@@ -359,7 +365,7 @@ class PhpWriter extends ProgramWriter {
 		foreach ($statement->pieces as $piece) {
 			$codePieces []= $piece->write($this, $indents) . ";";
 		}
-		return implode("\n" . $indents, $codePieces) . "\n";
+		return implode("\n" . $indents, $codePieces);
 	}
 	public function writeVoidExpression (VoidExpression $expression, $indents = "") {
 		// TODO ?

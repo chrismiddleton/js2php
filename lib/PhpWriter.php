@@ -259,7 +259,7 @@ class PhpWriter extends ProgramWriter {
 			$expression->b->write($this, $indents);
 	}
 	public function writeMultilineComment (MultilineComment $comment, $indents = "") {
-		return "/* {$comment->text} */";
+		return "/*{$comment->text}*/";
 	}
 	public function writeNotExpression (NotExpression $expression, $indents = "") {
 		return "!" . $expression->expression->write($this, $indents);
@@ -306,7 +306,7 @@ class PhpWriter extends ProgramWriter {
 		return "'" . $expression->text . "'";
 	}
 	public function writeSingleLineComment (SingleLineComment $comment, $indents = "") {
-		return "// {$comment->text}\n$indents";
+		return "//{$comment->text}\n$indents";
 	}
 	public function writeSingleVarDeclaration (SingleVarDeclaration $declaration, $indents = "") {
 		return ($declaration->declarator ? ("{$declaration->declarator} ") : "") . 

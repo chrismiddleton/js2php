@@ -22,11 +22,6 @@ class ForLoop {
 		$this->body = $body;
 	}
 	public function write (ProgramWriter $writer, $indents) {
-		return "for (" .
-			$this->init->write($writer, $indents) .
-			" " .
-			$this->test->write($writer, $indents) . 
-			($this->update ? (" " . $this->update->write($writer, $indents)) : "") . 
-			") " . $this->body->write($writer, $indents . "\t") . "\n";
+		return $writer->writeForLoop($this, $indents);
 	}
 }

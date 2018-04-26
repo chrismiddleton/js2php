@@ -136,6 +136,14 @@ class PhpWriter extends ProgramWriter {
 	public function writeExpressionStatement (ExpressionStatement $statement, $indents) {
 		return $statement->expression->write($this, $indents) . ";\n";
 	}
+	public function writeForLoop (ForLoop $loop, $indents) {
+		return "for (" .
+			$loop->init->write($this, $indents) .
+			" " .
+			$loop->test->write($this, $indents) . 
+			($loop->update ? (" " . $loop->update->write($this, $indents)) : "") . 
+			") " . $loop->body->write($this, $indents . "\t") . "\n";
+	}
 	public function writeForInLoop (ForInLoop $loop, $indents) {
 		return "foreach (" . 
 			$loop->object->write($this, $indents) . 

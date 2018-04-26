@@ -27,6 +27,7 @@ abstract class ProgramWriter {
 	abstract public function writeDoubleQuotedStringExpression (DoubleQuotedStringExpression $expression, $indents);
 	abstract public function writeDoWhileLoop (DoWhileLoop $loop, $indents);
 	abstract public function writeExpressionStatement (ExpressionStatement $statement, $indents);
+	abstract public function writeForLoop (ForLoop $loop, $indents);
 	abstract public function writeForInLoop (ForInLoop $loop, $indents);
 	abstract public function writeFunctionCallExpression (FunctionCallExpression $expression, $indents);
 	abstract public function writeFunctionDeclaration (FunctionDeclaration $declaration, $indents);

@@ -1,5 +1,5 @@
 <?php
 
-class ForOfLoop {
+class ForOfLoop extends Node {
 	// TODO
 }

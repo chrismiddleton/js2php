@@ -7,13 +7,14 @@ require_once __DIR__ . "/Keyword.php";
 require_once __DIR__ . "/Symbol.php";
 require_once __DIR__ . "/TokenException.php";
 
-class DoWhileLoop {
+class DoWhileLoop extends Node {
 	// TODO
 	public function __construct ($block, $test) {
 		$this->block = $block;
 		$this->test = $test;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return $writer->writeDoWhileLoop($this, $indents);
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			$writer->writeDoWhileLoop($this, $indents);
 	}
 }

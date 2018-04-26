@@ -7,7 +7,8 @@ class IndexExpression extends Expression {
 		$this->object = $object;
 		$this->index = $index;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return $writer->writeIndexExpression($this, $indents);
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			$writer->writeIndexExpression($this, $indents);
 	}
 }

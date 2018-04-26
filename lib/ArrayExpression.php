@@ -9,7 +9,8 @@ class ArrayExpression extends Expression {
 	public function __construct ($elements) {
 		$this->elements = $elements;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return $writer->writeArrayExpression($this, $indents);
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			$writer->writeArrayExpression($this, $indents);
 	}
 }

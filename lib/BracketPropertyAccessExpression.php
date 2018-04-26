@@ -7,7 +7,8 @@ class BracketPropertyAccessExpression extends Expression {
 		$this->object = $object;
 		$this->property = $property;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return $writer->writeBracketPropertyAccessExpression($this, $indents);
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			$writer->writeBracketPropertyAccessExpression($this, $indents);
 	}
 }

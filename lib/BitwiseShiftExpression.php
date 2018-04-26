@@ -11,7 +11,8 @@ class BitwiseShiftExpression extends Expression {
 		$this->symbol = $symbol;
 		$this->b = $b;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return $writer->writeBitwiseShiftExpression($this, $indents);
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			$writer->writeBitwiseShiftExpression($this, $indents);
 	}
 }

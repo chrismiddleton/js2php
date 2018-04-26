@@ -8,4 +8,11 @@ class Comments {
 	public function __construct ($comments) {
 		$this->comments = $comments;
 	}
+	public function write (ProgramWriter $writer, $indents = "") {
+		$code = "";
+		foreach ($this->comments as $comment) {
+			$code .= $comment->write($writer, $indents);
+		}
+		return $code;
+	}
 }

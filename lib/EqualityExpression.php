@@ -11,8 +11,9 @@ class EqualityExpression extends Expression {
 		$this->symbol = $symbol;
 		$this->b = $b;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return $this->a->write($writer, $indents) . 
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			$this->a->write($writer, $indents) . 
 			" {$this->symbol} " . 
 			$this->b->write($writer, $indents);
 	}

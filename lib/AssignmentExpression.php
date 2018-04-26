@@ -12,7 +12,8 @@ class AssignmentExpression extends Expression {
 		$this->symbol = $symbol;
 		$this->right = $right;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return $writer->writeAssignmentExpression($this, $indents);
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			$writer->writeAssignmentExpression($this, $indents);
 	}
 }

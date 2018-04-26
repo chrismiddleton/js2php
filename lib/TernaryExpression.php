@@ -11,9 +11,10 @@ class TernaryExpression extends Expression {
 		$this->yes = $yes;
 		$this->no = $no;
 	}
-	public function write (ProgramWriter $writer, $indents) {
+	public function write (ProgramWriter $writer, $indents = "") {
 		// parens due to php precedence difference
-		return $this->test->write($writer, $indents) . 
+		return parent::write($writer, $indents) . 
+			$this->test->write($writer, $indents) . 
 			" ? (" . 
 			$this->yes->write($writer, $indents) . 
 			") : (" . 

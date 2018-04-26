@@ -5,11 +5,12 @@ require_once __DIR__ . "/Expression.php";
 require_once __DIR__ . "/Keyword.php";
 require_once __DIR__ . "/Symbol.php";
 
-class ThrowStatement {
+class ThrowStatement extends Node {
 	public function __construct ($value) {
 		$this->value = $value;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return $writer->writeThrowStatement($this, $indents);
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			$writer->writeThrowStatement($this, $indents);
 	}
 }

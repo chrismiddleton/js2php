@@ -11,7 +11,8 @@ class BitwiseXorExpression extends Expression {
 		$this->symbol = $symbol;
 		$this->b = $b;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return $writer->writeBitwiseXorExpression($this, $indents);
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			$writer->writeBitwiseXorExpression($this, $indents);
 	}
 }

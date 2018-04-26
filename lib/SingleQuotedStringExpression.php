@@ -8,7 +8,8 @@ class SingleQuotedStringExpression extends Expression {
 	public function __construct ($text) {
 		$this->text = $text;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return $writer->writeSingleQuotedStringExpression($this, $indents);
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			$writer->writeSingleQuotedStringExpression($this, $indents);
 	}
 }

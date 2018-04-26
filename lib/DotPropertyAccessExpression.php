@@ -7,7 +7,8 @@ class DotPropertyAccessExpression extends Expression {
 		$this->object = $object;
 		$this->property = $property;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return $writer->writeDotPropertyAccessExpression($this, $indents);
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			$writer->writeDotPropertyAccessExpression($this, $indents);
 	}
 }

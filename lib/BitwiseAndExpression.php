@@ -11,7 +11,8 @@ class BitwiseAndExpression extends Expression {
 		$this->symbol = $symbol;
 		$this->b = $b;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return $writer->writeBitwiseAndExpression($this, $indents);
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			$writer->writeBitwiseAndExpression($this, $indents);
 	}
 }

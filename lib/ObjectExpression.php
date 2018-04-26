@@ -14,7 +14,8 @@ class ObjectExpression extends Expression {
 	public function __construct ($pairs) {
 		$this->pairs = $pairs;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return $writer->writeObjectExpression($this, $indents);
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			$writer->writeObjectExpression($this, $indents);
 	}
 }

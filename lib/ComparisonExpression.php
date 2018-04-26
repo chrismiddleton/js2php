@@ -11,7 +11,8 @@ class ComparisonExpression extends Expression {
 		$this->symbol = $symbol;
 		$this->b = $b;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return $writer->writeComparisonExpression($this, $indents);
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			$writer->writeComparisonExpression($this, $indents);
 	}
 }

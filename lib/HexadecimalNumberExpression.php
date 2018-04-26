@@ -8,7 +8,8 @@ class HexadecimalNumberExpression extends Expression {
 	public function __construct ($token) {
 		$this->token = $token;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return (string) $this->token;
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			(string) $this->token;
 	}
 }

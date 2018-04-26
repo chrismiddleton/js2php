@@ -15,7 +15,8 @@ class FunctionCallExpression extends Expression {
 		$this->func = $func;
 		$this->params = $params;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return $writer->writeFunctionCallExpression($this, $indents);
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			$writer->writeFunctionCallExpression($this, $indents);
 	}
 }

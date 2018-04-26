@@ -9,7 +9,8 @@ class CommaExpression extends Expression {
 	public function __construct ($expressions) {
 		$this->expressions = $expressions;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return $writer->writeCommaExpression($this, $indents);
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			$writer->writeCommaExpression($this, $indents);
 	}
 }

@@ -19,7 +19,8 @@ class FunctionExpression extends Expression {
 		$this->params = $params;
 		$this->body = $body;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return $writer->writeFunctionExpression($this, $indents);
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			$writer->writeFunctionExpression($this, $indents);
 	}
 }

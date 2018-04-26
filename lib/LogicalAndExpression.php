@@ -11,7 +11,8 @@ class LogicalAndExpression extends Expression {
 		$this->symbol = $symbol;
 		$this->b = $b;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return $writer->writeLogicalAndExpression($this, $indents);
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			$writer->writeLogicalAndExpression($this, $indents);
 	}
 }

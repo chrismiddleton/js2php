@@ -8,7 +8,8 @@ class DoubleQuotedStringExpression extends Expression {
 	public function __construct ($text) {
 		$this->text = $text;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return $writer->writeDoubleQuotedStringExpression($this, $indents);
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			$writer->writeDoubleQuotedStringExpression($this, $indents);
 	}
 }

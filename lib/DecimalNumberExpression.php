@@ -14,10 +14,11 @@ class DecimalNumberExpression extends Expression {
 		$this->expPos = $expPos;
 		$this->exp = $exp;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return $writer->writeDecimalNumberExpression($this, $indents);
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			$writer->writeDecimalNumberExpression($this, $indents);
 	}
-	public function writeDefault ($indents) {
+	public function writeDefault ($indents = "") {
 		$code = "";
 		if (!$this->pos) $code .= "-";
 		if (isset($this->int)) $code .= $this->int;

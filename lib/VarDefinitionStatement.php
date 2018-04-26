@@ -7,11 +7,12 @@ require_once __DIR__ . "/Keyword.php";
 require_once __DIR__ . "/Symbol.php";
 require_once __DIR__ . "/VarDefinitionPiece.php";
 
-class VarDefinitionStatement {
+class VarDefinitionStatement extends Node {
 	public function __construct ($pieces) {
 		$this->pieces = $pieces;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return $writer->writeVarDefinitionStatement($this, $indents);
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			$writer->writeVarDefinitionStatement($this, $indents);
 	}
 }

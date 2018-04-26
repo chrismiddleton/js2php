@@ -8,7 +8,8 @@ class BooleanExpression extends Expression {
 	public function __construct ($val) {
 		$this->val = $val;
 	}
-	public function write (ProgramWriter $writer, $indents) {
-		return $writer->writeBooleanExpression($this, $indents);
+	public function write (ProgramWriter $writer, $indents = "") {
+		return parent::write($writer, $indents) . 
+			$writer->writeBooleanExpression($this, $indents);
 	}
 }

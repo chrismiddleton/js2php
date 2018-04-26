@@ -7,8 +7,9 @@ class Space {
 		$this->space = $space;
 	}
 	public function write (ProgramWriter $writer, $indents = "") {
-		// TODO ? right now doing spacing automatically
-// 		return $writer->writeSpace($this, $indents);
+		// TODO ? right now doing spacing automatically, but allowing newlines through since a multiline comment may or may not have an important space
+		// TODO: other line endings here?
+// 		return str_replace("\n", "\n$indents", preg_replace('/ \t/', '', $this->space));
 		return "";
 	}
 }

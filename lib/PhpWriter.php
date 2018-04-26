@@ -259,7 +259,8 @@ class PhpWriter extends ProgramWriter {
 			$expression->b->write($this, $indents);
 	}
 	public function writeMultilineComment (MultilineComment $comment, $indents = "") {
-		return "/*{$comment->text}*/";
+		// TODO: handle cases of inline multiline comment
+		return "/*{$comment->text}*/\n";
 	}
 	public function writeNotExpression (NotExpression $expression, $indents = "") {
 		return "!" . $expression->expression->write($this, $indents);

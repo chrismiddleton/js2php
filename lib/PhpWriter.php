@@ -243,9 +243,9 @@ class PhpWriter extends ProgramWriter {
 		return $code;
 	}
 	public function writeIndexExpression (IndexExpression $expression, $indents = "") {
-		return $this->object->write($this, $indents) . 
+		return $expression->object->write($this, $indents) . 
 			"[" . 
-			$this->index->write($this, $indents) . 
+			$expression->index->write($this, $indents) . 
 			"]";
 	}
 	public function writeLogicalAndExpression (LogicalAndExpression $expression, $indents = "") {

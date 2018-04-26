@@ -92,11 +92,20 @@ class JsReader extends ProgramReader {
 		return new ArrayExpression($elements);
 	}
 	public function readAssignmentExpression (ArrayIterator $tokens) {
+		if (!$tokens->valid()) return null;
+		$start = $tokens->key();
+		$comments = $this->readComments($tokens);
 		debug("looking for assignment expression");
 		// TODO: verify that it's a valid LHS?
 		$left = $this->readTernaryExpression($tokens);
-		if (!$left) return;
-		if (!$tokens->valid()) return null;
+		if (!$left) {
+			$tokens->seek($start);
+			return null;
+		}
+		if (!$tokens->valid()) {
+			$tokens->seek($start);
+			return null;
+		}
 		$afterLeft = $tokens->key();
 		$symbols = array("=", "+=", "-=", "*=", "/=", "%=", "<<=", ">>=", ">>>=", "~=", "^=", "&=", "|=");
 		foreach ($symbols as $symbol) {
@@ -105,12 +114,15 @@ class JsReader extends ProgramReader {
 		}
 		if (!$symbolFound) {
 			$tokens->seek($afterLeft);
+			$left->comments = $comments;
 			return $left;
 		}
 		debug("found '{$symbolFound->symbol}' expression");
 		$right = $this->readAssignmentExpression($tokens);
 		if (!$right) throw new TokenException($tokens, "Expected RHS of assignment");
-		return new AssignmentExpression($left, $symbolFound, $right);
+		$expression = new AssignmentExpression($left, $symbolFound, $right);
+		$expression->comments = $comments;
+		return $expression;
 	}
 	public function readBitwiseAndExpression (ArrayIterator $tokens) {
 		return parseLeftAssociativeBinaryExpression(
@@ -149,6 +161,9 @@ class JsReader extends ProgramReader {
 		);
 	}
 	public function readBlock (ArrayIterator $tokens) {
+		if (!$tokens->valid()) return null;
+		$start = $tokens->key();
+		$comments = $this->readComments($tokens);
 		debug("looking for block start");
 		$brace = false;
 		if ($this->readSymbol($tokens, "{")) {
@@ -162,11 +177,16 @@ class JsReader extends ProgramReader {
 			$statements[] = $statement;
 			if (!$brace) break;
 		}
-		if (!count($statements) && !$brace) return null;
+		if (!count($statements) && !$brace) {
+			$tokens->seek($start);
+			return null;
+		}
 		if ($brace) {
 			if (!$this->readSymbol($tokens, "}")) throw new TokenException($tokens, "Expected closing '}' after block");
 		}
-		return new Block($statements, $brace);
+		$block = new Block($statements, $brace);
+		$block->comments = $comments;
+		return $block;
 	}
 	public function readBooleanExpression (ArrayIterator $tokens) {
 		if (!$tokens->valid()) return null;
@@ -191,10 +211,18 @@ class JsReader extends ProgramReader {
 		$tokens->seek($start);
 	}
 	public function readBreakStatement (ArrayIterator $tokens) {
-		if (!$this->readKeyword($tokens, "break")) return null;
+		if (!$tokens->valid()) return null;
+		$start = $tokens->key();
+		$comments = $this->readComments($tokens);
+		if (!$this->readKeyword($tokens, "break")) {
+			$tokens->seek($start);
+			return null;
+		}
 		// semicolon optional
 		$this->readSymbol($tokens, ";");
-		return new BreakStatement();
+		$statement = new BreakStatement();
+		$statement->comments = $comments;
+		return $statement;
 	}
 	public function readCommaExpression (ArrayIterator $tokens) {
 		debug("looking for comma expression");
@@ -418,17 +446,31 @@ class JsReader extends ProgramReader {
 		return $expression;
 	}
 	public function readExpressionStatement (ArrayIterator $tokens) {
+		if (!$tokens->valid()) return null;
+		$start = $tokens->key();
+		$comments = $this->readComments($tokens);
 		debug("looking for expression statement");
-		if (!($expression = $this->readExpression($tokens))) return;
+		if (!($expression = $this->readExpression($tokens))) {
+			$tokens->seek($start);
+			return null;
+		}
 		debug("found expression statement");
 		// TODO: make it either eat a semicolon or a newline
 		// semicolon optional
 		$this->readSymbol($tokens, ";");
-		return new ExpressionStatement($expression);
+		$statement = new ExpressionStatement($expression);
+		$statement->comments = $comments;
+		return $statement;
 	}
 	public function readForLoop (ArrayIterator $tokens) {
+		if (!$tokens->valid()) return null;
+		$start = $tokens->key();
+		$comments = $this->readComments($tokens);
 		debug("looking for 'for' loop");
-		if (!$this->readKeyword($tokens, "for")) return null;
+		if (!$this->readKeyword($tokens, "for")) {
+			$tokens->seek($start);
+			return null;
+		}
 		debug("found 'for' loop");
 		if (!$this->readSymbol($tokens, "(")) {
 			throw new TokenException($tokens, "Expected '(' after 'for' keyword");
@@ -446,13 +488,20 @@ class JsReader extends ProgramReader {
 		}
 		$body = $this->readBlock($tokens);
 		if (!$body) throw new TokenException($tokens, "Expected for loop body");
-		return new ForLoop($init, $test, $update, $body);
+		$loop = new ForLoop($init, $test, $update, $body);
+		$loop->comments = $comments;
+		return $loop;
 	}
 	public function readForInLoop (ArrayIterator $tokens) {
-		debug("looking for for...in loop");
 		if (!$tokens->valid()) return null;
 		$start = $tokens->key();
-		if (!$this->readKeyword($tokens, "for")) return null;
+		$comments = $this->readComments($tokens);
+		debug("looking for for...in loop");
+		$start = $tokens->key();
+		if (!$this->readKeyword($tokens, "for")) {
+			$tokens->seek($start);
+			return null;
+		}
 		if (!$this->readSymbol($tokens, "(")) {
 			throw new TokenException($tokens, "Expected '(' after 'for' keyword");
 		}
@@ -474,7 +523,9 @@ class JsReader extends ProgramReader {
 		if (!($body = $this->readBlock($tokens))) {
 			throw new TokenException($tokens, "Expected block after for...in loop header");
 		}
-		return new ForInLoop($declaration, $object, $body);
+		$loop = new ForInLoop($declaration, $object, $body);
+		$loop->comments = $comments;
+		return $loop;
 	}
 	public function readFunctionBody (ArrayIterator $tokens) {
 		debug("parsing function body");
@@ -529,6 +580,8 @@ class JsReader extends ProgramReader {
 	public function readFunctionDeclaration (ArrayIterator $tokens) {
 		if (!$tokens->valid()) return null;
 		$start = $tokens->key();
+		$comments = $this->readComments($tokens);
+		// TODO: not using this right now because getting comments above
 		// get last doc block
 		while ($tokens->valid()) {
 			if ($docBlock = $this->readDocBlock($tokens)) continue;
@@ -570,11 +623,15 @@ class JsReader extends ProgramReader {
 		if (!$this->readSymbol($tokens, "}")) {
 			throw new TokenException($tokens, "Expected closing '}' after function body");
 		}
-		return new FunctionDeclaration($name, $params, $body);
+		$declaration = new FunctionDeclaration($name, $params, $body);
+		$declaration->comments = $comments;
+		return $declaration;
 	}
 	public function readFunctionExpression (ArrayIterator $tokens) {
 		if (!$tokens->valid()) return null;
 		$start = $tokens->key();
+		$comments = $this->readComments($tokens);
+		// TODO: not using this right now because getting comments above
 		// get last doc block
 		while ($tokens->valid()) {
 			if ($docBlock = $this->readDocBlock($tokens)) continue;
@@ -612,7 +669,9 @@ class JsReader extends ProgramReader {
 		if (!$this->readSymbol($tokens, "}")) {
 			throw new TokenException($tokens, "Expected closing '}' after function body");
 		}
-		return new FunctionExpression($name, $params, $body);
+		$expression = new FunctionExpression($name, $params, $body);
+		$expression->comments = $comments;
+		return $expression;
 	}
 	public function readFunctionIdentifier (ArrayIterator $tokens) {
 		$result = $this->readIdentifier($tokens);
@@ -662,7 +721,13 @@ class JsReader extends ProgramReader {
 		return new IdentifierExpression($identifier);
 	}
 	public function readIfStatement (ArrayIterator $tokens) {
-		if (!$this->readKeyword($tokens, "if")) return null;
+		if (!$tokens->valid()) return null;
+		$start = $tokens->key();
+		$comments = $this->readComments($tokens);
+		if (!$this->readKeyword($tokens, "if")) {
+			$tokens->seek($start);
+			return null;
+		}
 		debug("found if statement");
 		if (!$this->readSymbol($tokens, "(")) {
 			throw new TokenException($tokens, "Expected '(' after if");
@@ -680,7 +745,9 @@ class JsReader extends ProgramReader {
 			debug("found else");
 			$elseBlock = $this->readBlock($tokens);
 		}
-		return new IfStatement($condition, $ifBlock, $elseBlock);
+		$statement = new IfStatement($condition, $ifBlock, $elseBlock);
+		$statement->comments = $comments;
+		return $statement;
 	}
 	public function readKeyword (ArrayIterator $tokens, $keyword) {
 		if (!$tokens->valid()) return null;
@@ -733,6 +800,9 @@ class JsReader extends ProgramReader {
 		);
 	}
 	public function readNotLevelExpression (ArrayIterator $tokens) {
+		if (!$tokens->valid()) return null;
+		$start = $tokens->key();
+		$comments = $this->readComments($tokens);
 		debug("looking for not level expression");
 		if ($this->readSymbol($tokens, "!")) {
 			$expression = $this->readNotLevelExpression($tokens);
@@ -740,35 +810,35 @@ class JsReader extends ProgramReader {
 				throw new TokenException($tokens, "Expected expression after '!'");
 			}
 			debug("found not expression");
-			return new NotExpression($expression);
+			$expression = new NotExpression($expression);
 		} else if ($this->readSymbol($tokens, "~")) {
 			$expression = $this->readNotLevelExpression($tokens);
 			if (!$expression) {
 				throw new TokenException($tokens, "Expected expression after '~'");
 			}
 			debug("found bitwise not expression");
-			return new BitwiseNotExpression($expression);
+			$expression = new BitwiseNotExpression($expression);
 		} else if ($this->readSymbol($tokens, "+")) {
 			$expression = $this->readNotLevelExpression($tokens);
 			if (!$expression) {
 				throw new TokenException($tokens, "Expected expression after '+'");
 			}
 			debug("found unary plus expression");
-			return new PlusExpression($expression);
+			$expression = new PlusExpression($expression);
 		} else if ($this->readSymbol($tokens, "-")) {
 			$expression = $this->readNotLevelExpression($tokens);
 			if (!$expression) {
 				throw new TokenException($tokens, "Expected expression after '-'");
 			}
 			debug("found unary minus expression");
-			return new MinusExpression($expression);
+			$expression = new MinusExpression($expression);
 		} else if ($this->readSymbol($tokens, "++")) {
 			$expression = $this->readNotLevelExpression($tokens);
 			if (!$expression) {
 				throw new TokenException($tokens, "Expected expression after '++'");
 			}
 			debug("found prefix increment expression");
-			return new PrefixIncrementExpression($expression);
+			$expression = new PrefixIncrementExpression($expression);
 		} else if ($this->readSymbol($tokens, "--")) {
 			$expression = $this->readNotLevelExpression($tokens);
 			if (!$expression) {
@@ -782,32 +852,38 @@ class JsReader extends ProgramReader {
 				throw new TokenException($tokens, "Expected expression after 'typeof'");
 			}
 			debug("found typeof expression");
-			return new TypeofExpression($expression);
+			$expression = new TypeofExpression($expression);
 		} else if ($this->readSymbol($tokens, "void")) {
 			$expression = $this->readNotLevelExpression($tokens);
 			if (!$expression) {
 				throw new TokenException($tokens, "Expected expression after 'void'");
 			}
 			debug("found void expression");
-			return new VoidExpression($expression);
+			$expression = new VoidExpression($expression);
 		} else if ($this->readSymbol($tokens, "delete")) {
 			$expression = $this->readNotLevelExpression($tokens);
 			if (!$expression) {
 				throw new TokenException($tokens, "Expected expression after 'delete'");
 			}
 			debug("found delete expression");
-			return new DeleteExpression($expression);
+			$expression = new DeleteExpression($expression);
 		} else if ($this->readSymbol($tokens, "await")) {
 			$expression = $this->readNotLevelExpression($tokens);
 			if (!$expression) {
 				throw new TokenException($tokens, "Expected expression after 'await'");
 			}
 			debug("found await expression");
-			return new AwaitExpression($expression);
+			$expression = new AwaitExpression($expression);
 		} else {
+			$tokens->seek($start);
 			$expression = $this->readPostfixIncrementLevelExpression($tokens);
-			return $expression;
 		}
+		if (!$expression) {
+			$tokens->seek($start);
+			return null;
+		}
+		$expression->comments = $comments;
+		return $expression;
 	}
 	public function readNullExpression (ArrayIterator $tokens) {
 		if (!$tokens->valid()) return null;
@@ -827,12 +903,15 @@ class JsReader extends ProgramReader {
 		$tokens->seek($start);
 	}
 	public function readObjectExpression (ArrayIterator $tokens) {
-		debug("looking for object expression");
 		if (!$tokens->valid()) return null;
+		$start = $tokens->key();
+		$comments = $this->readComments($tokens);
+		debug("looking for object expression");
 		$start = $tokens->key();
 		if (!$this->readSymbol($tokens, "{")) {
 			debug("no '{' found");
-			return;
+			$tokens->seek($start);
+			return null;
 		}
 		$pairs = array();
 		// TODO: support newer forms of objects
@@ -856,7 +935,9 @@ class JsReader extends ProgramReader {
 			throw new TokenException($tokens, "Expected closing '}' after object");
 		}
 		debug("found object expression");
-		return new ObjectExpression($pairs);
+		$expression = new ObjectExpression($pairs);
+		$expression->comments = $comments;
+		return $expression;
 	}
 	public function readParenthesizedExpression (ArrayIterator $tokens) {
 		if (!$this->readSymbol($tokens, "(")) {
@@ -915,14 +996,22 @@ class JsReader extends ProgramReader {
 		return new PropertyIdentifier($result->name);
 	}
 	public function readReturnStatement (ArrayIterator $tokens) {
-		if (!$this->readKeyword($tokens, "return")) return;
+		if (!$tokens->valid()) return null;
+		$start = $tokens->key();
+		$comments = $this->readComments($tokens);
+		if (!$this->readKeyword($tokens, "return")) {
+			$tokens->seek($start);
+			return null;
+		}
 		debug("found return statement");
 		// can be null, that's OK
 		$value = $this->readExpression($tokens);
 		// optional semicolon
 		$this->readSymbol($tokens, ";");
 		// TODO: handle cutting off early when newline (e.g. "return 5\n+6" should just return 5 in JS)
-		return new ReturnStatement($value);
+		$statement = new ReturnStatement($value);
+		$statement->comments = $comments;
+		return $statement;
 	}
 	public function readRegexExpression (ArrayIterator $tokens) {
 		if (!$tokens->valid()) return null;
@@ -982,6 +1071,9 @@ class JsReader extends ProgramReader {
 		return $expression;
 	}
 	public function readSingleVarDeclaration (ArrayIterator $tokens) {
+		if (!$tokens->valid()) return null;
+		$start = $tokens->key();
+		$comments = $this->readComments($tokens);
 		debug("looking for single var declaration");
 		$declarator = null;
 		if ($this->readKeyword($tokens, "var")) {
@@ -991,10 +1083,13 @@ class JsReader extends ProgramReader {
 			if ($declarator) {
 				throw new TokenException($tokens, "Expected identifier after '$declarator'");
 			}
+			$tokens->seek($start);
 			return null;
 		}
 		debug("found single var declaration");
-		return new SingleVarDeclaration($declarator, $identifier);
+		$declaration = new SingleVarDeclaration($declarator, $identifier);
+		$declaration->comments = $comments;
+		return $declaration;
 	}
 	public function readSpace (ArrayIterator $tokens) {
 		$token = $tokens->current();
@@ -1006,6 +1101,7 @@ class JsReader extends ProgramReader {
 	public function readStatement (ArrayIterator $tokens) {
 		if (!$tokens->valid()) return null;
 		$start = $tokens->key();
+		$comments = $this->readComments($tokens);
 		$statement = $this->readEmptyStatement($tokens) or
 			$statement = $this->readVarDefinitionStatement($tokens) or
 			$statement = $this->readIfStatement($tokens) or
@@ -1026,11 +1122,12 @@ class JsReader extends ProgramReader {
 			$statement = $this->readExpressionStatement($tokens);
 		// We parse these here so that we don't misinterpret them as identifier expression statements,
 		// but they are not really statements so we return null.
-		if ($statement instanceof SwitchCase || $statement instanceof DefaultSwitchCase) {
+		if ($statement instanceof SwitchCase || $statement instanceof DefaultSwitchCase || !$statement) {
 			// TODO: pass info about being in a switch case so that we don't run them at all
 			$tokens->seek($start);
 			return null;
 		}
+		$statement->comments = $comments;
 		return $statement;
 	}
 	public function readSwitchCase (ArrayIterator $tokens) {

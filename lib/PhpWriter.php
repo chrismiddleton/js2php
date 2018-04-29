@@ -240,7 +240,7 @@ class PhpWriter extends ProgramWriter {
 		$code .= $statement->ifBlock->write($this, $indents);
 		if ($statement->elseBlock) {
 			if (!$statement->ifBlock->brace) $code .= "\n$indents";
-			else $code. = " ";
+			else $code .= " ";
 			$code .= "else " . $statement->elseBlock->write($this, $indents);
 		}
 		return $code;
